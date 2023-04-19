@@ -1,17 +1,9 @@
 import .love08_operational_semantics_demo .love01_definitions_and_statements_demo
 
 
-/-! # LoVe Demo 8: Operational Semantics
+-- set_option pp.beta true
+-- set_option pp.generalized_field_notation false
 
-In this and the next two lectures, we will see how to use Lean to specify the
-syntax and semantics of programming languages and to reason about the
-semantics. -/
-
-
-set_option pp.beta true
-set_option pp.generalized_field_notation false
-
--- namespace LoVe
 namespace LoComp
 
 open LoVe
@@ -20,9 +12,16 @@ def vname := string
 
 def val := ℤ
 
-def stack := list ℤ -- TODO: ???val??? how do we make it accept 
+def stack := list ℤ -- TODO: ???val??? how do we make it accept, because +, -, *, / is not defined for val
 
-def state := vname → val
+def state := vname → ℤ
+
+def config := ℤ × state × stack
+
+abbreviation head2 (xs : stack) : ℤ := xs.tail.head
+abbreviation tail2 (xs : stack) : stack := xs.tail.tail
+
+
 
 
 inductive instr : Type  -- page 35 
@@ -32,73 +31,71 @@ inductive instr : Type  -- page 35
 | SUB : instr
 | MUL : instr
 | DIV : instr
+| STORE : vname → instr
+| JMP : int → instr
+| JMPLESS : int → instr
+| JMPGE : int → instr
 
 
 open instr
 
-def execl : instr → state → stack → stack 
-| (LOADI n) _ stk := n :: stk
-| (LOAD x) s stk :=  (s x) :: stk 
-| ADD _ (j :: i :: stk ) := (i + j) :: stk
-| ADD _ nil := nil  -- anything where it cannot compute
-| SUB _ (j :: i :: stk ) := (i - j) :: stk
-| SUB _ nil := nil
-| MUL _ (j :: i :: stk ) := (i * j) :: stk
-| MUL _ nil := nil
-| DIV _ (j :: i :: stk ) := (i / j) :: stk
-| DIV _ nil := nil
 
 
+def iexec : instr → config → config -- TODO: fill in the full matching
+| (LOADI n) (i, s, stk) := (i + 1, s, n :: stk)
+| (LOAD v) (i, s, stk) := (i + 1, s, s v :: stk)
+| ADD (i, s, stk) := (i + 1, s, (head2 stk + stk.head) :: tail2 stk)
+| SUB (i, s, stk) := (i + 1, s, (head2 stk - stk.head) :: tail2 stk)
+| MUL (i, s, stk) := (i + 1, s, (head2 stk * stk.head) :: tail2 stk)
+| DIV (i, s, stk) := (i + 1, s, (head2 stk / stk.head) :: tail2 stk)
+| (STORE v) (i, s, stk) := (i + 1, s{v ↦ (stk.head)}, stk.tail) -- so state.update only works on the state that is not the correct one 
+| (JMP n) (i, s, stk) := (i + 1 + n, s, stk)
+| (JMPLESS n) (i, s, stk) := 
+  if (head2 stk) < (stk.head)
+  then (i + 1 + n, s, tail2 stk)
+  else (i + 1, s, tail2 stk)
+| (JMPGE n) (i, s, stk) := 
+  if (head2 stk) ≥ (stk.head)
+  then (i + 1 + n, s, tail2 stk)
+  else (i + 1, s, tail2 stk)
+
+/- redefinition for ints rather than nat -/ 
+def nth : list instr → ℤ → option instr  
+| (a :: l) 0 := option.some a
+| (a :: l) n := nth l (n - 1)
+| list.nil n := option.none
 
 
-def exec : list instr → state → stack → stack
-| list.nil _ stk := stk
-| (i :: is) s stk := exec is s (execl i s stk)
+/- 
+  Execute one instruction
+  check if pc is in a valid location in the list 
+-/
+def exec1  (li : list instr) (c : config)  (c' : config) : Prop := -- TODO: fix option/instr
+∃ i s stk, c = (i, s, stk) ∧ c' = iexec (nth li i) (i, s, stk) ∧ 0 ≤ i ∧ i < li.length  
+
+/-
+lemma exec1I [intro, code_pred_intro]:
+  "c' = iexec (P!!i) (i,s,stk) ⟹ 0 ≤ i ⟹ i < size P
+  ⟹ P ⊢ (i,s,stk) → c'"
+by (simp add: exec1_def)
+-/
 
 
-open LoVe.aexp
+abbreviation exec (li : list instr) (c : config) (c' : config) : Prop :=
+star (exec1 li) c c'
 
-def comp : aexp → list instr
-| (num n) := [LOADI n]
-| (var x) := [LOAD x]
-| (aexp.add a b) := comp a ++ comp b ++ [ADD] 
-| (aexp.sub a b) := comp a ++ comp b ++ [SUB] 
-| (aexp.mul a b) := comp a ++ comp b ++ [MUL] 
-| (aexp.div a b) := comp a ++ comp b ++ [DIV] 
+/-
+lemmas exec_induct = star.induct [of "exec1 P", split_format(complete)]
+-/
 
 
+-- VERIFICATION INFRASTRUCTURE
 
-
-lemma exec_comp_eq_eval {x : aexp}  {s stk} :
-  exec (comp x) s stk = (eval s x) :: stk :=
-begin
-  induction' x,
-  case LoVe.aexp.num {
-    simp [comp, exec],
-    refl,
-  },
-  case LoVe.aexp.var {
-    simp [comp, exec],
-    refl,
-  },
-  case LoVe.aexp.add {
-    simp [comp, exec, ih_x, ih_x_1, eval, add_comm, add_assoc],
-    sorry,
-  },
-  case LoVe.aexp.sub {
-    simp [comp, exec],
-    sorry,
-  },
-  case LoVe.aexp.mul {
-    simp [comp, exec],
-    sorry,
-  },
-  case LoVe.aexp.div {
-    simp [comp, exec, ih_x, ih_x_1, eval],
-    sorry,
-  },
-end
-
+/-
+lemma iexec_shift [simp]: 
+  "((n+i',s',stk') = iexec x (n+i,s,stk)) = ((i',s',stk') = iexec x (i,s,stk))"
+by(auto split:instr.split)
+-/
 
 
 
