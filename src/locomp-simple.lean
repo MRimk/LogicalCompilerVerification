@@ -81,7 +81,7 @@ begin
   case LoVe.aexp.add {
     simp [comp, exec],
     simp [eval],
-    -- simp [comp, exec, ih_x, ih_x_1, eval, add_comm, add_assoc],
+    simp [comp, exec, ih_x, ih_x_1, eval, add_comm, add_assoc],
     sorry 
   },
   case LoVe.aexp.sub {
