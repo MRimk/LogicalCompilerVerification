@@ -263,22 +263,24 @@ lemma exec1I {li : list instr} {i s stk c'}
     simp [h1, h2, h3]
   end
 
-lemma exec_trans {li : list instr} {c1 c2 c3 : config}
-  (h1 : exec1 li c1 c2)
-  (h2 : exec1 li c2 c3) :
-  exec1 li c1 c3 :=
-  begin
-    -- Use the definition of exec1 to unpack the assumptions
-    rcases h1 with ⟨i1, s1, stk1, hc1, hc2, hi1⟩,
-    rcases h2 with ⟨i2, s2, stk2, hc2', hc3, hi2⟩,
-    -- Use transitivity of execution to relate the two configurations
-    subst hc2,
-    have h : i1 < li.length,
-    { linarith [hi1, hi2] },
-    -- Apply exec1I lemma to obtain the transitivity lemma
-    exact exec1I hc3 hi1.left h,
-    -- TODO: replace exec1 right side of c3 with h1 items 
-  end
+-- lemma exec_trans {li : list instr} {c1 c2 c3 : config}
+--   (h1 : exec1 li c1 c2)
+--   (h2 : exec1 li c2 c3) :
+--   exec1 li c1 c3 :=
+--   begin
+--     -- Use the definition of exec1 to unpack the assumptions
+
+--     rcases h1 with ⟨i1, s1, stk1, hc1, hc2, hi1⟩,
+--     rcases h2 with ⟨i2, s2, stk2, hc2', hc3, hi2⟩,
+--     -- Use transitivity of execution to relate the two configurations
+--     -- subst hc2,
+--     have h : i1 < li.length,
+--     { linarith [hi1, hi2] },
+--     -- Apply exec1I lemma to obtain the transitivity lemma
+--     -- exact exec1I hc3 hi1.left h,
+--     sorry
+--     -- TODO: replace exec1 right side of c3 with h1 items 
+--   end
 
 
 
@@ -433,6 +435,53 @@ begin
 end
 
 
+@[simp]
+theorem list.zero_le_length {α : Type} (l : list α) : 0 ≤ list.length l :=
+begin
+  induction l with hd tl hl,
+  case list.nil { simp,},
+  { simp [list.length_cons, int.coe_nat_succ],}
+end
+
+
+/-
+lemma inth_append [simp]:
+  "0 ≤ i ⟹
+  (xs @ ys) !! i = (if i < size xs then xs !! i else ys !! (i - size xs))"
+by (induction xs arbitrary: i) (auto simp: algebra_simps)
+-/
+lemma nth_append {l1 l2 : list instr} {i : ℤ}
+  (h : 0 ≤ i) :
+  nth (l1 ++ l2) i = (
+    if i < list.length l1
+    then nth l1 i
+    else nth l2 (i - list.length l1)) :=
+  begin
+  induction l1,
+  -- induction l1 with hd tl hl generalizing l2 i,
+  case list.nil { 
+    simp only [list.nil_append, nth, list.length],
+    sorry,
+  },
+  case list.cons { 
+    cases i,
+    case int.of_nat {
+      simp [list.zero_le_length, list.length_append, nth],
+      rw [if_pos, nth],
+      {sorry},
+      {sorry},
+      {sorry},
+      -- rw [if_pos, nth, zero_add],
+      -- refl,
+      -- exact list.zero_le_length
+    },
+    case int.neg_succ_of_nat {
+      sorry,
+
+    },
+  } 
+  end
+
 
 
 
@@ -443,35 +492,66 @@ by (auto simp: exec1_def)
 lemma exec1_appendR {li c c' li'} (h: exec1 li c c'): 
 exec1 (li ++ li') c c' :=
 begin
-  -- simp [exec1],
-  -- cases c with i s_stk,
-  -- use i,
-  -- cases s_stk with s stk,
-  -- use s,
-  -- use stk,
-  -- sorry,
-  induction li with hd tl ih,
+  simp [exec1],
+  induction li,
   case list.nil {
-    sorry,
+    simp,
+    cases c with i s_stk,
+    cases s_stk with s stk,
+    use i,
+    use s,
+    use stk,
+    split,
+    {refl},
+    have h_c' : c' = iexec (nth li' i) (i, s, stk) :=
+      begin
+        sorry,
+      end,
+    have h_ilow : i ≥ 0, from sorry,
+    have h_ihigh : i < list.length li', from sorry,
+    have h_bounds : i ≥ 0 ∧ i < list.length li', from and.intro h_ilow h_ihigh,
+    show c' = iexec (nth li' i) (i, s, stk) ∧ i ≥ 0 ∧ i < ↑(list.length li'), from and.intro h_c' h_bounds
   },
   case list.cons {
-    rw list.cons_append,
-    sorry,
-  }
-
-
+    simp,
+    cases c with i s_stk,
+    cases s_stk with s stk,
+    use i,
+    use s,
+    use stk,
+    split,
+    refl,
+    have h_c' : c' = iexec (nth (li_hd :: (li_tl ++ li')) i) (i, s, stk) :=
+      begin
+        sorry,
+      end,
+    have h_ilow : 0 ≤ i, from sorry,
+    have h_ihigh : i < list.length li_tl + 1 + list.length li', from sorry,
+    have h_bounds : 0 ≤ i ∧ i < list.length li_tl + 1 + list.length li', from and.intro h_ilow h_ihigh,
+    show c' = iexec (nth (li_hd :: (li_tl ++ li')) i) (i, s, stk) ∧ 0 ≤ i ∧ i < ↑(list.length li_tl) + 1 + ↑(list.length li'), from and.intro h_c' h_bounds,
+  },
 end
 
 /-
 lemma exec_appendR: "P ⊢ c →* c' ⟹ P@P' ⊢ c →* c'"
 by (induction rule: star.induct) (fastforce intro: star.step exec1_appendR)+
+
+abbreviation exec (li : list instr) (c : config) (c' : config) : Prop :=
+star (exec1 li) c c'
+
+inductive star {α : Sort*} (r : α → α → Prop) (a : α) : α → Prop
+| refl {}    : star a
+| tail {b c} : star b → r b c → star c
 -/
 lemma exec_appendR {li c c' li'} (h: exec li c c'):
 exec (li ++ li') c c' :=
 begin
   induction' h,
-  -- cases
-  sorry,   --TODO: what is fastforce intro?
+  case LoComp.rtc.star.refl {
+    sorry,
+  },
+  case LoComp.rtc.star.tail {sorry},
+
 end
 
 /-
