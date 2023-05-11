@@ -550,7 +550,9 @@ begin
   case LoComp.rtc.star.refl {
     sorry,
   },
-  case LoComp.rtc.star.tail {sorry},
+  case LoComp.rtc.star.tail {
+    sorry
+  },
 
 end
 
@@ -564,7 +566,12 @@ lemma exec1_appendL:
   by (auto simp del: iexec.simps)
 -/
 
--- lemma exec1_appendL {i i'}  --TODO: how does fixes i i' work?
+lemma exec1_appendL {i i' :ℤ} {li li' i s stk i' s' stk'}
+(h : exec1 li (i, s, stk) (i', s', stk')) :
+exec1 (li' ++ li) (list.length li' + i, s, stk) (list.length li' + i', s', stk') :=
+begin
+  sorry,
+end
 
 /-
 lemma exec_appendL:
@@ -575,7 +582,12 @@ lemma exec_appendL:
   by (induction rule: exec_induct) (blast intro: star.step exec1_appendL)+
 -/
 -- lemma exec_appendL {i i'} -- TODO: how does fixes work and what is blast intro?
-
+lemma exec_appendL {i i' :ℤ} {li li' i s stk i' s' stk'}
+(h : exec li (i, s, stk) (i', s', stk')) :
+exec (li' ++ li) (list.length li' + i, s, stk) (list.length li' + i', s', stk') :=
+begin
+  sorry,
+end
 
 /-
 text‹Now we specialise the above lemmas to enable automatic proofs of
@@ -590,7 +602,14 @@ lemma exec_Cons_1 [intro]:
   "P ⊢ (0,s,stk) →* (j,t,stk') ⟹
   instr#P ⊢ (1,s,stk) →* (1+j,t,stk')"
 by (drule exec_appendL[where P'="[instr]"]) simp
-
+-/
+lemma exec_cons_1 {s stk j t stk' li instr}
+(h : exec li (0, s, stk) (j, t, stk')):
+exec (instr :: li) (1, s, stk) (1 + j, t, stk') :=
+begin 
+  sorry, 
+end
+/-
 lemma exec_appendL_if[intro]:
   fixes i i' j :: int
   shows
@@ -599,7 +618,18 @@ lemma exec_appendL_if[intro]:
    ⟹ i' = size P' + j
    ⟹ P' @ P ⊢ (i,s,stk) →* (i',s',stk')"
 by (drule exec_appendL[where P'=P']) simp
+-/
 
+lemma exec_appendL_if {li' li s stk j s' stk'} {i i' : ℤ}
+(h1: list.length li' <= i ) --TODO: fix the types
+(h2: exec li (i - list.length li', s, stk) (j, s', stk'))
+(h3: i' = list.length li' + j): 
+exec (li' ++ li) (i, s, stk) (i', s', stk') :=
+begin
+  sorry
+end
+
+/-
 text‹Split the execution of a compound program up into the execution of its
 parts:›
 
@@ -613,8 +643,18 @@ lemma exec_append_trans[intro]:
  ⟹
  P @ P' ⊢ (0,s,stk) →* (j'',s'',stk'')"
 by(metis star_trans[OF exec_appendR exec_appendL_if])
+-/
+lemma exec_appendL_trans {li' li s stk  s' stk' s'' stk''} {i i' j'' i'': ℤ}
+(h1: exec li (0, s, stk) (i', s', stk'))
+(h2: list.length li <= i' ) --TODO: fix the types
+(h3: exec li' (i' - list.length li, s', stk') (i'', s'', stk''))
+(h3: j'' = list.length li + 1): 
+exec (li ++ li') (0, s, stk) (j'', s'', stk'') :=
+begin
+  sorry
+end
 
-
+/-
 declare Let_def[simp]
 
 
