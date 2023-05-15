@@ -458,7 +458,6 @@ lemma nth_append {l1 l2 : list instr} {i : ℤ}
     else nth l2 (i - list.length l1)) :=
   begin
   induction l1,
-  -- induction l1 with hd tl hl generalizing l2 i,
   case list.nil { 
     simp only [list.nil_append, nth, list.length],
     sorry,
@@ -493,42 +492,63 @@ lemma exec1_appendR {li c c' li'} (h: exec1 li c c'):
 exec1 (li ++ li') c c' :=
 begin
   simp [exec1],
+  obtain ⟨i, s, stk, hi, h_conds⟩ := h,
   induction li,
   case list.nil {
-    simp,
-    cases c with i s_stk,
-    cases s_stk with s stk,
+    -- simp,
+    -- cases c with i s_stk,
+    -- -- cases s_stk with s stk,
     use i,
     use s,
     use stk,
+    unfold_coes, --for int.of_nat in the goal - types
     split,
-    {refl},
-    have h_c' : c' = iexec (nth li' i) (i, s, stk) :=
+    {
+      apply hi,
+    },
+    have h_c' : c' = iexec (nth (list.nil ++ li') i) (i, s, stk) :=
       begin
-        sorry,
+        -- apply nth_append h_conds.right.left,
+        -- if exec1I is bijective, then it should work
+        sorry
       end,
-    have h_ilow : i ≥ 0, from sorry,
-    have h_ihigh : i < list.length li', from sorry,
+    have h_ilow : i ≥ 0 := 
+    begin 
+      apply h_conds.right.left,
+    end,
+    have h_ihigh : i < list.length li' := 
+    begin
+      have h1 : i < 0, from h_conds.right.right,
+      have h2 : 0 ≤ list.length li' := by simp,
+      linarith,
+    end,
+    simp,
     have h_bounds : i ≥ 0 ∧ i < list.length li', from and.intro h_ilow h_ihigh,
-    show c' = iexec (nth li' i) (i, s, stk) ∧ i ≥ 0 ∧ i < ↑(list.length li'), from and.intro h_c' h_bounds
+    show c' = iexec (nth li' i) (i, s, stk) ∧ i ≥ 0 ∧ i < ↑(list.length li'), from and.intro h_c' h_bounds,
   },
   case list.cons {
     simp,
-    cases c with i s_stk,
-    cases s_stk with s stk,
     use i,
     use s,
     use stk,
+    ring_nf,
+    norm_cast at *,
+    unfold_coes,
     split,
-    refl,
+    apply hi,
     have h_c' : c' = iexec (nth (li_hd :: (li_tl ++ li')) i) (i, s, stk) :=
       begin
-        sorry,
+        sorry, -- do not know how to get this
       end,
-    have h_ilow : 0 ≤ i, from sorry,
-    have h_ihigh : i < list.length li_tl + 1 + list.length li', from sorry,
-    have h_bounds : 0 ≤ i ∧ i < list.length li_tl + 1 + list.length li', from and.intro h_ilow h_ihigh,
-    show c' = iexec (nth (li_hd :: (li_tl ++ li')) i) (i, s, stk) ∧ 0 ≤ i ∧ i < ↑(list.length li_tl) + 1 + ↑(list.length li'), from and.intro h_c' h_bounds,
+    have h_ilow : 0 ≤ i, from h_conds.right.left, -- from h if possible to reverse exec1I
+    have h_ihigh : i < (list.length li_tl + (list.length li' + 1)) :=
+    begin
+      have h_initial : i < list.length (li_hd :: li_tl), from h_conds.right.right, -- from the h
+      have h_full : (list.length (li_hd :: li_tl)) ≤ ((list.length li_tl) + ((list.length li') + 1)) := by simp, -- from inequality def
+      linarith,
+    end,
+    have h_bounds : 0 ≤ i ∧ i < ↑(list.length li_tl + (list.length li' + 1)), from and.intro h_ilow h_ihigh,
+    show c' = iexec (nth (li_hd :: (li_tl ++ li')) i) (i, s, stk) ∧ 0 ≤ i ∧ i < (list.length li_tl + (list.length li' + 1)), from and.intro h_c' h_bounds,
   },
 end
 
@@ -548,10 +568,13 @@ exec (li ++ li') c c' :=
 begin
   induction' h,
   case LoComp.rtc.star.refl {
-    sorry,
+    fconstructor,
   },
   case LoComp.rtc.star.tail {
-    sorry
+    fconstructor,
+    {sorry},
+    {sorry},
+    {sorry},
   },
 
 end
@@ -570,7 +593,42 @@ lemma exec1_appendL {i i' :ℤ} {li li' i s stk i' s' stk'}
 (h : exec1 li (i, s, stk) (i', s', stk')) :
 exec1 (li' ++ li) (list.length li' + i, s, stk) (list.length li' + i', s', stk') :=
 begin
-  sorry,
+  simp only [exec1],
+  obtain ⟨i_h, s_h, stk_h, hi, h_conds⟩ := h,
+  use i,
+  use s,
+  use stk,
+  have h_i : i = i_h := by finish,
+  have h_s : s = s_h := by finish,
+  have h_stk : stk = stk_h := by finish,
+  split,
+  {
+    sorry,  -- intuition that the pc was shifted by list.length(?) 
+  },
+  {
+    fconstructor,
+    {
+      -- apply iexec_shift, and probably nth_append
+      sorry,
+    },
+    norm_num,
+    have h_ilow : 0 ≤ i :=
+    begin
+      subst h_i, 
+      apply h_conds.right.left,
+    end,
+    have h_ihigh : i < list.length li' + list.length li :=
+    begin
+      have h_initial : i < list.length li := 
+      begin 
+        subst i_h,
+        apply h_conds.right.right,
+      end,
+      have h_full : list.length li ≤ list.length li' + list.length li := by simp, -- from inequality def
+      linarith,
+    end,
+    show 0 ≤ i ∧ i < list.length li' + list.length li, from and.intro h_ilow h_ihigh
+  }
 end
 
 /-
@@ -581,12 +639,21 @@ lemma exec_appendL:
   P' @ P ⊢ (size(P')+i,s,stk) →* (size(P')+i',s',stk')"
   by (induction rule: exec_induct) (blast intro: star.step exec1_appendL)+
 -/
--- lemma exec_appendL {i i'} -- TODO: how does fixes work and what is blast intro?
+-- lemma exec_appendL {i i'} 
 lemma exec_appendL {i i' :ℤ} {li li' i s stk i' s' stk'}
 (h : exec li (i, s, stk) (i', s', stk')) :
 exec (li' ++ li) (list.length li' + i, s, stk) (list.length li' + i', s', stk') :=
 begin
-  sorry,
+  induction' h,
+  case LoComp.rtc.star.refl {
+    fconstructor,
+  },
+  case LoComp.rtc.star.tail {
+    fconstructor,
+    {sorry}, -- so this has to be the transitive config through which i step through to get to the other one
+    {sorry},
+    {sorry},
+  },
 end
 
 /-
@@ -621,12 +688,15 @@ by (drule exec_appendL[where P'=P']) simp
 -/
 
 lemma exec_appendL_if {li' li s stk j s' stk'} {i i' : ℤ}
-(h1: list.length li' <= i ) --TODO: fix the types
+(h1: int.of_nat (list.length li') <= i )
 (h2: exec li (i - list.length li', s, stk) (j, s', stk'))
 (h3: i' = list.length li' + j): 
 exec (li' ++ li) (i, s, stk) (i', s', stk') :=
 begin
-  sorry
+  fconstructor,
+  {apply (i, s, stk)},
+  {sorry},
+  {sorry},
 end
 
 /-
@@ -646,7 +716,7 @@ by(metis star_trans[OF exec_appendR exec_appendL_if])
 -/
 lemma exec_appendL_trans {li' li s stk  s' stk' s'' stk''} {i i' j'' i'': ℤ}
 (h1: exec li (0, s, stk) (i', s', stk'))
-(h2: list.length li <= i' ) --TODO: fix the types
+(h2: int.of_nat (list.length li) <= i' )
 (h3: exec li' (i' - list.length li, s', stk') (i'', s'', stk''))
 (h3: j'' = list.length li + 1): 
 exec (li ++ li') (0, s, stk) (j'', s'', stk'') :=
