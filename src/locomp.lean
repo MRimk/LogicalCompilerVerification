@@ -519,8 +519,9 @@ lemma nth_append {l1 l2 : list instr} {i : ℤ}
             
           },
           {
-            -- simp,
-            sorry,
+            simp [h_izero],
+            simp at h_nneg,
+            apply h_nneg,
           }
         },
       }
@@ -533,16 +534,28 @@ lemma nth_append {l1 l2 : list instr} {i : ℤ}
         specialize l1_ih h_nneg,
         simp [h_izero] at *,
         simp [nth] at *,
-        
+        -- the goal expects l1_hd to be reachable by l2 at -i - l1_tl.length
+        -- and i have no clue how to get to that so i should rewrite it
         sorry,
       },
       {
-        simp [nth],
+        -- specialize l1_ih h_nneg,
+        simp [nth] at *,
         simp [h_izero],
+        --TODO: specialize with i - 1, then i can do something maybe
+        have h_notless : ¬ (i < list.length l1_tl) := by linarith,
+        -- simp [h_notless] at l1_ih,
+        -- ring_nf,
+        -- rw ← [int.add_assoc],
+        have h_iminusdist : i - (↑(list.length l1_tl) + 1) = i - 1 - ↑(list.length l1_tl) := 
+        begin
+          ring,
+        end,
+        simp [h_iminusdist],
+        
+        -- port i to i - 1, but don't know how to. Maybe cc
         sorry,
       },
-
-      -- sorry,
     },
   } 
   end
