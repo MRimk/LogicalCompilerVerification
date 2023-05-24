@@ -209,7 +209,7 @@ open instr
 
 
 
-def iexec : instr → config → config -- TODO: fill in the full matching
+def iexec : instr → config → config
 | (LOADI n) (i, s, stk) := (i + 1, s, n :: stk)
 | (LOAD v) (i, s, stk) := (i + 1, s, s v :: stk)
 | ADD (i, s, stk) := (i + 1, s, (head2 stk + stk.head) :: tail2 stk)
@@ -230,8 +230,9 @@ def iexec : instr → config → config -- TODO: fill in the full matching
 
 /- redefinition for ints rather than nat -/ 
 def nth : list instr → ℤ → instr  
-| (a :: l) 0 := a
-| (a :: l) n := nth l (n - 1)
+| (a :: l) n := if (n = 0) 
+  then a
+  else nth l (n - 1)
 | list.nil n := NOP
 
 
@@ -451,32 +452,97 @@ lemma inth_append [simp]:
 by (induction xs arbitrary: i) (auto simp: algebra_simps)
 -/
 lemma nth_append {l1 l2 : list instr} {i : ℤ}
-  (h : 0 ≤ i) :
+  (h_nneg : 0 ≤ i) :
   nth (l1 ++ l2) i = (
-    if i < list.length l1
+    if i < int.of_nat (list.length l1)
     then nth l1 i
     else nth l2 (i - list.length l1)) :=
   begin
-  induction l1,
+  induction l1 generalizing i,
   case list.nil { 
     simp only [list.nil_append, nth, list.length],
-    sorry,
+    by_cases (i < int.of_nat 0),
+    {
+      simp at h,
+      apply false.elim, 
+      linarith,
+    },
+    {
+      simp at h,
+      simp [h],
+      have h_neg : ¬ (i < 0) := 
+      begin
+        linarith,
+      end,
+      simp [h_neg],
+    },
   },
   case list.cons { 
-    cases i,
-    case int.of_nat {
-      simp [list.zero_le_length, list.length_append, nth],
-      rw [if_pos, nth],
-      {sorry},
-      {sorry},
-      {sorry},
-      -- rw [if_pos, nth, zero_add],
-      -- refl,
-      -- exact list.zero_le_length
+    by_cases h_ite : (i < int.of_nat (list.length (l1_hd :: l1_tl))),
+    {
+      simp only [h_ite],
+      simp,
+      by_cases h_izero: (i = 0),
+      {
+        simp [h_izero],
+        simp [nth],
+      },
+      {
+        simp [nth, h_izero],
+        rw l1_ih,
+        {
+          clear l1_ih,
+          have h_cond : (i - 1 < int.of_nat (list.length l1_tl)) :=
+          begin
+            simp only [list.length, int.of_nat_add] at h_ite,
+            simp at h_ite,
+            simp,
+            linarith,
+          end,
+          simp only [h_cond],
+          simp,
+        },
+        {
+          clear l1_ih,
+          clear h_ite,
+          cases i,
+          {
+            cases i,
+            {
+              simp at h_izero,
+              cc,
+            },
+            {
+              rw [int.of_nat_succ],
+              simp,
+            }
+            
+          },
+          {
+            -- simp,
+            sorry,
+          }
+        },
+      }
     },
-    case int.neg_succ_of_nat {
-      sorry,
+    {
+      simp only [h_ite],
+      simp,
+      by_cases h_izero : (i = 0),
+      {
+        specialize l1_ih h_nneg,
+        simp [h_izero] at *,
+        simp [nth] at *,
+        
+        sorry,
+      },
+      {
+        simp [nth],
+        simp [h_izero],
+        sorry,
+      },
 
+      -- sorry,
     },
   } 
   end
@@ -506,25 +572,14 @@ begin
     {
       apply hi,
     },
-    have h_c' : c' = iexec (nth (list.nil ++ li') i) (i, s, stk) :=
-      begin
-        -- apply nth_append h_conds.right.left,
-        -- if exec1I is bijective, then it should work
-        sorry
-      end,
-    have h_ilow : i ≥ 0 := 
-    begin 
-      apply h_conds.right.left,
-    end,
-    have h_ihigh : i < list.length li' := 
-    begin
-      have h1 : i < 0, from h_conds.right.right,
-      have h2 : 0 ≤ list.length li' := by simp,
+    simp at h_conds,
+    have h_f : false, begin 
+      have h_imore: 0 ≤ i, from h_conds.right.left,
+      have h_iless: i < 0, from  h_conds.right.right,
       linarith,
     end,
-    simp,
-    have h_bounds : i ≥ 0 ∧ i < list.length li', from and.intro h_ilow h_ihigh,
-    show c' = iexec (nth li' i) (i, s, stk) ∧ i ≥ 0 ∧ i < ↑(list.length li'), from and.intro h_c' h_bounds,
+    apply false.elim,
+    show false, from h_f,
   },
   case list.cons {
     simp,
@@ -538,6 +593,8 @@ begin
     apply hi,
     have h_c' : c' = iexec (nth (li_hd :: (li_tl ++ li')) i) (i, s, stk) :=
       begin
+        rw h_conds.left,
+
         sorry, -- do not know how to get this
       end,
     have h_ilow : 0 ≤ i, from h_conds.right.left, -- from h if possible to reverse exec1I
@@ -571,10 +628,12 @@ begin
     fconstructor,
   },
   case LoComp.rtc.star.tail {
-    fconstructor,
-    {sorry},
-    {sorry},
-    {sorry},
+    apply rtc.star.tail,
+    {apply ih,},
+    {
+      apply exec1_appendR,
+      exact h_1,
+    },
   },
 
 end
@@ -591,7 +650,7 @@ lemma exec1_appendL:
 
 lemma exec1_appendL {i i' :ℤ} {li li' i s stk i' s' stk'}
 (h : exec1 li (i, s, stk) (i', s', stk')) :
-exec1 (li' ++ li) (list.length li' + i, s, stk) (list.length li' + i', s', stk') :=
+exec1 (li' ++ li) ((list.length li') + i, s, stk) ((list.length li') + i', s', stk') :=
 begin
   simp only [exec1],
   obtain ⟨i_h, s_h, stk_h, hi, h_conds⟩ := h,
@@ -603,6 +662,7 @@ begin
   have h_stk : stk = stk_h := by finish,
   split,
   {
+
     sorry,  -- intuition that the pc was shifted by list.length(?) 
   },
   {
@@ -641,19 +701,25 @@ lemma exec_appendL:
 -/
 -- lemma exec_appendL {i i'} 
 lemma exec_appendL {i i' :ℤ} {li li' i s stk i' s' stk'}
-(h : exec li (i, s, stk) (i', s', stk')) :
+(h_single : exec li (i, s, stk) (i', s', stk')) :
 exec (li' ++ li) (list.length li' + i, s, stk) (list.length li' + i', s', stk') :=
 begin
-  induction' h,
+  induction' h_single,
   case LoComp.rtc.star.refl {
     fconstructor,
   },
   case LoComp.rtc.star.tail {
-    fconstructor,
-    {sorry}, -- so this has to be the transitive config through which i step through to get to the other one
-    {sorry},
-    {sorry},
-  },
+    -- apply rtc.star.tail,
+    -- {
+    --   sorry,
+    -- },
+    -- {
+    --   apply exec1_appendR,
+    --   exact h,
+    -- },
+
+sorry,  
+},
 end
 
 /-
@@ -674,7 +740,18 @@ lemma exec_cons_1 {s stk j t stk' li instr}
 (h : exec li (0, s, stk) (j, t, stk')):
 exec (instr :: li) (1, s, stk) (1 + j, t, stk') :=
 begin 
-  sorry, 
+  rw ← list.nil_append li at h,
+  have h' : exec [instr] (0, s, stk) (1, s, stk),
+  {
+    sorry, 
+  }, 
+
+  -- induction li,
+  
+
+  -- exact h'',
+  -- exact exec_appendL h,
+  sorry,
 end
 /-
 lemma exec_appendL_if[intro]:
