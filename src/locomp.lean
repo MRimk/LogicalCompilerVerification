@@ -445,6 +445,30 @@ begin
 end
 
 
+lemma i_pos {i : ℤ} (h_nneg : 0 ≤ i) (h_inotzero : ¬ i = 0) :
+0 ≤ i - 1 :=
+begin
+  cases i,
+  {
+    cases i,
+    {
+      simp at h_inotzero,
+      cc,
+    },
+    {
+      rw [int.of_nat_succ],
+      simp,
+    }
+    
+  },
+  {
+    simp [h_inotzero],
+    simp at h_nneg,
+    apply h_nneg,
+  }
+end
+
+
 /-
 lemma inth_append [simp]:
   "0 ≤ i ⟹
@@ -505,24 +529,7 @@ lemma nth_append {l1 l2 : list instr} {i : ℤ}
         {
           clear l1_ih,
           clear h_ite,
-          cases i,
-          {
-            cases i,
-            {
-              simp at h_izero,
-              cc,
-            },
-            {
-              rw [int.of_nat_succ],
-              simp,
-            }
-            
-          },
-          {
-            simp [h_izero],
-            simp at h_nneg,
-            apply h_nneg,
-          }
+          apply i_pos h_nneg h_izero, 
         },
       }
     },
@@ -531,30 +538,20 @@ lemma nth_append {l1 l2 : list instr} {i : ℤ}
       simp,
       by_cases h_izero : (i = 0),
       {
-        specialize l1_ih h_nneg,
-        simp [h_izero] at *,
-        simp [nth] at *,
-        -- the goal expects l1_hd to be reachable by l2 at -i - l1_tl.length
-        -- and i have no clue how to get to that so i should rewrite it
-        sorry,
+        simp [list.length] at h_ite,
+        apply false.elim,
+        linarith,
       },
       {
-        -- specialize l1_ih h_nneg,
+        have h_ipos : 0 ≤ i - 1, from i_pos h_nneg h_izero,
+        specialize l1_ih h_ipos,
         simp [nth] at *,
         simp [h_izero],
-        --TODO: specialize with i - 1, then i can do something maybe
-        have h_notless : ¬ (i < list.length l1_tl) := by linarith,
-        -- simp [h_notless] at l1_ih,
-        -- ring_nf,
-        -- rw ← [int.add_assoc],
-        have h_iminusdist : i - (↑(list.length l1_tl) + 1) = i - 1 - ↑(list.length l1_tl) := 
-        begin
-          ring,
-        end,
+        have h_notless : ¬ (i - 1 < list.length l1_tl) := by linarith,
+        simp [h_notless] at l1_ih,
+        have h_iminusdist : i - (↑(list.length l1_tl) + 1) = i - 1 - ↑(list.length l1_tl) := by ring,
         simp [h_iminusdist],
-        
-        -- port i to i - 1, but don't know how to. Maybe cc
-        sorry,
+        apply l1_ih,
       },
     },
   } 
@@ -573,10 +570,7 @@ begin
   simp [exec1],
   obtain ⟨i, s, stk, hi, h_conds⟩ := h,
   induction li,
-  case list.nil {
-    -- simp,
-    -- cases c with i s_stk,
-    -- -- cases s_stk with s stk,
+  case list.nil { 
     use i,
     use s,
     use stk,
@@ -595,30 +589,53 @@ begin
     show false, from h_f,
   },
   case list.cons {
-    simp,
-    use i,
-    use s,
-    use stk,
-    ring_nf,
-    norm_cast at *,
-    unfold_coes,
-    split,
-    apply hi,
-    have h_c' : c' = iexec (nth (li_hd :: (li_tl ++ li')) i) (i, s, stk) :=
-      begin
-        rw h_conds.left,
 
-        sorry, -- do not know how to get this
-      end,
-    have h_ilow : 0 ≤ i, from h_conds.right.left, -- from h if possible to reverse exec1I
-    have h_ihigh : i < (list.length li_tl + (list.length li' + 1)) :=
-    begin
-      have h_initial : i < list.length (li_hd :: li_tl), from h_conds.right.right, -- from the h
-      have h_full : (list.length (li_hd :: li_tl)) ≤ ((list.length li_tl) + ((list.length li') + 1)) := by simp, -- from inequality def
-      linarith,
-    end,
-    have h_bounds : 0 ≤ i ∧ i < ↑(list.length li_tl + (list.length li' + 1)), from and.intro h_ilow h_ihigh,
-    show c' = iexec (nth (li_hd :: (li_tl ++ li')) i) (i, s, stk) ∧ 0 ≤ i ∧ i < (list.length li_tl + (list.length li' + 1)), from and.intro h_c' h_bounds,
+    by_cases h_izero : (i = 0),
+    {
+      use i,
+      use s,
+      use stk,
+      simp,
+      simp [nth, h_izero] at *,
+      split,
+      {apply hi,},
+      split,
+      {apply h_conds,},
+      {linarith,},
+    },
+    {
+      use i,
+      use s,
+      use stk,
+      have h_inneg : 0 ≤ i, from h_conds.right.left,  
+      have h_ipos : 0 ≤ i - 1, from i_pos h_conds.right.left h_izero, 
+      split,
+      {apply hi,},
+      split,
+      {
+        clear hi,
+        simp [nth] at h_conds,
+        simp [h_izero] at h_conds,
+        simp [nth],
+        simp [h_izero],
+        -- have i
+        have h_append_eq : nth (li_tl ++ li') (i - 1) = nth li_tl (i - 1) :=
+        begin 
+          -- simp [nth_append],
+          sorry,
+        end,
+        rw h_conds.left,
+        rw h_append_eq,
+      },
+      split,
+      {
+        apply h_conds.right.left,
+      },
+      {
+        have h_length : i < ↑(list.length (li_hd :: li_tl)), from h_conds.right.right,
+        linarith,
+      },
+    },
   },
 end
 
@@ -675,32 +692,28 @@ begin
   have h_stk : stk = stk_h := by finish,
   split,
   {
-
+    
     sorry,  -- intuition that the pc was shifted by list.length(?) 
   },
+  split,
   {
-    fconstructor,
-    {
-      -- apply iexec_shift, and probably nth_append
-      sorry,
-    },
+
+    sorry,
+  },
+  split,
+  {
+    subst h_i, 
+    apply h_conds.right.left,
+  },
+  {
     norm_num,
-    have h_ilow : 0 ≤ i :=
-    begin
-      subst h_i, 
-      apply h_conds.right.left,
+    have h_initial : i < list.length li := 
+    begin 
+      subst i_h,
+      apply h_conds.right.right,
     end,
-    have h_ihigh : i < list.length li' + list.length li :=
-    begin
-      have h_initial : i < list.length li := 
-      begin 
-        subst i_h,
-        apply h_conds.right.right,
-      end,
-      have h_full : list.length li ≤ list.length li' + list.length li := by simp, -- from inequality def
-      linarith,
-    end,
-    show 0 ≤ i ∧ i < list.length li' + list.length li, from and.intro h_ilow h_ihigh
+    have h_full : list.length li ≤ list.length li' + list.length li := by simp, -- from inequality def
+    linarith,
   }
 end
 
