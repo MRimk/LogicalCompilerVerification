@@ -703,36 +703,91 @@ begin
   have h_stk : stk = stk_h := by finish,
   induction li',
   case list.nil {
-    sorry,
+    simp [list.length],
+    subst i_h,
+    subst s_h,
+    subst stk_h,
+    exact h_conds,
   },  
   case list.cons {
-    sorry,
+    split,
+    {
+      -- have h_eq : (↑(list.length li'_tl) + i, s, stk) = (i, s, stk), from li'_ih.left,
+      -- have h_surprise : (↑(list.length (li'_hd :: li'_tl)) + i, s, stk) = (↑(list.length li'_tl) + i, s, stk), from sorry,
+      -- simp at h_surprise,
+      -- have h_rfl : (i, s, stk) = (↑(list.length (li'_hd :: li'_tl)) + i, s, stk) :=
+      -- begin
+      --   have h_eq_rfl : (i, s, stk) = (↑(list.length li'_tl) + i, s, stk) := by sorry,
+      --   sorry,
+      -- end,
+      -- rw [h_eq],
+      simp,
+      -- simp [list.zero_le_length],
+      have h_list_nneg : 0 ≤ ↑(list.length li'_tl) := begin
+        apply list.zero_le_length,
+      end,
+      
+      -- how can this ever be true? ↑(list.length li'_tl) + 1 = 0
+      sorry,
+    },
+    split,
+    {
+      simp,
+      simp [nth],
+      by_cases h_izero : (i = 0),
+      {
+        simp [h_izero],
+        sorry,
+      },
+      {
+        simp [h_izero],
+        have ih_eq : (↑(list.length li'_tl) + i', s', stk') = iexec (nth (li'_tl ++ li) i) (i, s, stk), from li'_ih.right.left,
+
+        -- (↑(list.length li'_tl) + 1 + i', s', stk') = iexec (nth (li'_tl ++ li) (i - 1)) (i, s, stk)
+        sorry,
+        /-
+        code from appendR:
+        simp [h_izero] at h_conds,
+        simp [nth],
+        simp [h_izero],
+        have h_append_eq : nth (li_tl ++ li') (i - 1) = nth li_tl (i - 1) :=
+        begin 
+          rw [nth_append],
+          {
+            have h_ite : i - 1 < int.of_nat (list.length li_tl) :=
+            begin
+              have h_less : i < ↑(list.length li_tl) + 1, from h_conds.right.right,
+              simp,
+              linarith,
+            end,
+            simp [h_ite],
+            intro h_more,
+            simp at h_ite,
+            apply false.elim,
+            linarith,
+          },
+          {exact h_ipos,},
+        end,
+        rw h_conds.left,
+        rw h_append_eq,-/
+      },
+    },
+    split,
+    {
+      subst h_i, 
+      apply h_conds.right.left,
+    },
+    {
+      norm_num,
+      have h_initial : i < list.length li := 
+      begin 
+        subst i_h,
+        apply h_conds.right.right,
+      end,
+      have h_full : list.length li ≤ list.length li'_tl + list.length li := by simp, -- from inequality def
+      linarith,
+    }
   },
-  -- split,
-  -- {
-    
-  --   sorry,  -- intuition that the pc was shifted by list.length(?) 
-  -- },
-  -- split,
-  -- {
-    
-  --   sorry,
-  -- },
-  -- split,
-  -- {
-  --   subst h_i, 
-  --   apply h_conds.right.left,
-  -- },
-  -- {
-  --   norm_num,
-  --   have h_initial : i < list.length li := 
-  --   begin 
-  --     subst i_h,
-  --     apply h_conds.right.right,
-  --   end,
-  --   have h_full : list.length li ≤ list.length li' + list.length li := by simp, -- from inequality def
-  --   linarith,
-  -- }
 end
 
 /-
@@ -785,6 +840,8 @@ lemma exec_cons_1 {s stk j t stk' li instr}
 exec (instr :: li) (1, s, stk) (1 + j, t, stk') :=
 begin 
   rw ← list.nil_append li at h,
+  
+
   have h' : exec [instr] (0, s, stk) (1, s, stk),
   {
     sorry, 
