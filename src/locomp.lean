@@ -839,20 +839,14 @@ lemma exec_cons_1 {s stk j t stk' li instr}
 (h : exec li (0, s, stk) (j, t, stk')):
 exec (instr :: li) (1, s, stk) (1 + j, t, stk') :=
 begin 
-  rw ← list.nil_append li at h,
-  
-
-  have h' : exec [instr] (0, s, stk) (1, s, stk),
-  {
-    sorry, 
-  }, 
-
-  -- induction li,
-  
-
-  -- exact h'',
-  -- exact exec_appendL h,
-  sorry,
+  have h_shift : exec ([instr] ++ li) ((list.length [instr]) + 0, s, stk) ((list.length [instr]) + j, t, stk') :=
+  begin 
+    apply exec_appendL h,
+    apply j,
+    apply j,
+  end,
+  simp at h_shift,
+  exact h_shift,
 end
 /-
 lemma exec_appendL_if[intro]:
