@@ -689,12 +689,40 @@ lemma exec1_appendL:
   by (auto simp del: iexec.simps)
 -/
 
-lemma exec1_appendL {i i' :ℤ} {li li' i s stk i' s' stk'}
-(h : exec1 li (i, s, stk) (i', s', stk')) :
+lemma exec1_appendL {i i' :ℤ} {li li' s stk s' stk'}
+(h_li : exec1 li (i, s, stk) (i', s', stk')) :
 exec1 (li' ++ li) ((list.length li') + i, s, stk) ((list.length li') + i', s', stk') :=
 begin
+  induction li',
+  case list.nil {
+    simp,
+    exact h_li,
+  },
+  case list.cons {
+    simp [exec1],
+    simp [exec1] at li'_ih,
+    obtain ⟨i, s, stk, hi, h_conds⟩ := h_li,
+    use i,
+    use s,
+    use stk,
+    split,
+    {
+      split,
+      {
+        -- i
+        sorry,   
+      }
+      ,
+      split,
+      {finish}, -- s
+      {finish} -- stk
+    },
+    {sorry},
+  }
+
+/-
   simp only [exec1],
-  obtain ⟨i_h, s_h, stk_h, hi, h_conds⟩ := h,
+  obtain ⟨i_h, s_h, stk_h, hi, h_conds⟩ := h_li,
   use i,
   use s,
   use stk,
@@ -726,8 +754,9 @@ begin
       have h_list_nneg : 0 ≤ ↑(list.length li'_tl) := begin
         apply list.zero_le_length,
       end,
-
+      
       -- how can this ever be true? ↑(list.length li'_tl) + 1 = 0
+      -- prove false
       sorry,
     },
     split,
@@ -788,6 +817,7 @@ begin
       linarith,
     }
   },
+  -/
 end
 
 /-
@@ -931,6 +961,36 @@ fun acomp :: "aexp ⇒ instr list" where
 "acomp (V x) = [LOAD x]" |
 "acomp (Plus a1 a2) = acomp a1 @ acomp a2 @ [ADD]"
 
+-/
+inductive aexp : Type
+| num : ℤ → aexp
+| var : string → aexp
+| add : aexp → aexp → aexp
+| sub : aexp → aexp → aexp
+| mul : aexp → aexp → aexp
+| div : aexp → aexp → aexp
+
+open aexp
+
+def eval (env : string → ℤ) : aexp → ℤ
+| (num i)     := i
+| (var x)     := env x
+| (add e₁ e₂) := eval e₁ + eval e₂
+| (sub e₁ e₂) := eval e₁ - eval e₂
+| (mul e₁ e₂) := eval e₁ * eval e₂
+| (div e₁ e₂) := eval e₁ / eval e₂
+
+
+def acomp : aexp → list instr
+| (num n) := [LOADI n]
+| (var x) := [LOAD x]
+| (add e₁ e₂) := acomp e₁ ++ acomp e₂ ++ [ADD]
+| (sub e₁ e₂) := acomp e₁ ++ acomp e₂ ++ [SUB]
+| (mul e₁ e₂) := acomp e₁ ++ acomp e₂ ++ [MUL]
+| (div e₁ e₂) := acomp e₁ ++ acomp e₂ ++ [DIV]
+
+
+/-
 lemma acomp_correct[intro]:
   "acomp a ⊢ (0,s,stk) →* (size(acomp a),s,aval a s#stk)"
 by (induction a arbitrary: stk) fastforce+
