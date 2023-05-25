@@ -726,7 +726,7 @@ begin
       have h_list_nneg : 0 ≤ ↑(list.length li'_tl) := begin
         apply list.zero_le_length,
       end,
-      
+
       -- how can this ever be true? ↑(list.length li'_tl) + 1 = 0
       sorry,
     },
@@ -808,17 +808,22 @@ begin
     fconstructor,
   },
   case LoComp.rtc.star.tail {
-    -- apply rtc.star.tail,
-    -- {
-    --   sorry,
-    -- },
-    -- {
-    --   apply exec1_appendR,
-    --   exact h,
-    -- },
-
-sorry,  
-},
+    apply rtc.star.tail,
+    {      
+      have h_b : b = (i', s', stk') := sorry, -- no clue how to get this 
+      specialize ih h_b,
+      apply li',
+      apply ih,
+    },
+    {
+      apply exec1_appendL,
+      apply i,
+      apply i,
+      have h_b : b = (i', s', stk') := sorry, -- no clue how to get this 
+      simp [h_b] at h,
+      exact h,
+    },
+  },
 end
 
 /-
@@ -865,10 +870,15 @@ lemma exec_appendL_if {li' li s stk j s' stk'} {i i' : ℤ}
 (h3: i' = list.length li' + j): 
 exec (li' ++ li) (i, s, stk) (i', s', stk') :=
 begin
-  fconstructor,
-  {apply (i, s, stk)},
-  {sorry},
-  {sorry},
+  have h_append : exec (li' ++ li) (list.length li' + (i - list.length li'), s, stk) (list.length li' + j, s', stk') :=
+  begin
+    apply exec_appendL h2,
+    apply i,
+    apply i,
+  end,
+  simp at h_append,
+  rw [h3],
+  exact h_append,
 end
 
 /-
@@ -886,14 +896,28 @@ lemma exec_append_trans[intro]:
  P @ P' ⊢ (0,s,stk) →* (j'',s'',stk'')"
 by(metis star_trans[OF exec_appendR exec_appendL_if])
 -/
-lemma exec_appendL_trans {li' li s stk  s' stk' s'' stk''} {i i' j'' i'': ℤ}
+lemma exec_append_trans {li' li s stk  s' stk' s'' stk''} {i i' j'' i'': ℤ}
 (h1: exec li (0, s, stk) (i', s', stk'))
 (h2: int.of_nat (list.length li) <= i' )
 (h3: exec li' (i' - list.length li, s', stk') (i'', s'', stk''))
-(h3: j'' = list.length li + 1): 
+(h4: j'' = list.length li + i''): 
 exec (li ++ li') (0, s, stk) (j'', s'', stk'') :=
 begin
-  sorry
+  apply rtc.star.trans,
+  have h_appendR_li' : exec (li ++ li') (0, s, stk) (i', s', stk') :=
+  begin
+    apply exec_appendR h1,
+  end, 
+  exact h_appendR_li',
+  have h_appendL_li : exec (li ++ li') (list.length li + (i' - list.length li), s', stk') (list.length li + i'', s'', stk'') :=
+  begin
+    apply exec_appendL h3,
+    apply i',
+    apply i',
+  end,
+  simp at h_appendL_li,
+  rw [h4],
+  exact h_appendL_li,
 end
 
 /-
