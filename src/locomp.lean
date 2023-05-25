@@ -589,7 +589,6 @@ begin
     show false, from h_f,
   },
   case list.cons {
-
     by_cases h_izero : (i = 0),
     {
       use i,
@@ -618,11 +617,23 @@ begin
         simp [h_izero] at h_conds,
         simp [nth],
         simp [h_izero],
-        -- have i
         have h_append_eq : nth (li_tl ++ li') (i - 1) = nth li_tl (i - 1) :=
         begin 
-          -- simp [nth_append],
-          sorry,
+          rw [nth_append],
+          {
+            have h_ite : i - 1 < int.of_nat (list.length li_tl) :=
+            begin
+              have h_less : i < ↑(list.length li_tl) + 1, from h_conds.right.right,
+              simp,
+              linarith,
+            end,
+            simp [h_ite],
+            intro h_more,
+            simp at h_ite,
+            apply false.elim,
+            linarith,
+          },
+          {exact h_ipos,},
         end,
         rw h_conds.left,
         rw h_append_eq,
@@ -690,31 +701,38 @@ begin
   have h_i : i = i_h := by finish,
   have h_s : s = s_h := by finish,
   have h_stk : stk = stk_h := by finish,
-  split,
-  {
-    
-    sorry,  -- intuition that the pc was shifted by list.length(?) 
-  },
-  split,
-  {
-
+  induction li',
+  case list.nil {
+    sorry,
+  },  
+  case list.cons {
     sorry,
   },
-  split,
-  {
-    subst h_i, 
-    apply h_conds.right.left,
-  },
-  {
-    norm_num,
-    have h_initial : i < list.length li := 
-    begin 
-      subst i_h,
-      apply h_conds.right.right,
-    end,
-    have h_full : list.length li ≤ list.length li' + list.length li := by simp, -- from inequality def
-    linarith,
-  }
+  -- split,
+  -- {
+    
+  --   sorry,  -- intuition that the pc was shifted by list.length(?) 
+  -- },
+  -- split,
+  -- {
+    
+  --   sorry,
+  -- },
+  -- split,
+  -- {
+  --   subst h_i, 
+  --   apply h_conds.right.left,
+  -- },
+  -- {
+  --   norm_num,
+  --   have h_initial : i < list.length li := 
+  --   begin 
+  --     subst i_h,
+  --     apply h_conds.right.right,
+  --   end,
+  --   have h_full : list.length li ≤ list.length li' + list.length li := by simp, -- from inequality def
+  --   linarith,
+  -- }
 end
 
 /-
