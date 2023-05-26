@@ -693,7 +693,7 @@ lemma exec1_appendL {i i' :ℤ} {li li' s stk s' stk'}
 (h_li : exec1 li (i, s, stk) (i', s', stk')) :
 exec1 (li' ++ li) ((list.length li') + i, s, stk) ((list.length li') + i', s', stk') :=
 begin
-  induction li',
+  induction li' generalizing i,
   case list.nil {
     simp,
     exact h_li,
@@ -705,119 +705,33 @@ begin
     use i,
     use s,
     use stk,
+    simp at hi,
     split,
     {
-      split,
-      {
-        -- i
-        sorry,   
-      }
-      ,
-      split,
-      {finish}, -- s
-      {finish} -- stk
-    },
-    {sorry},
-  }
+      simp [hi],
+      -- how to use this: specialize li'_ih h_conds.left,
 
-/-
-  simp only [exec1],
-  obtain ⟨i_h, s_h, stk_h, hi, h_conds⟩ := h_li,
-  use i,
-  use s,
-  use stk,
-  have h_i : i = i_h := by finish,
-  have h_s : s = s_h := by finish,
-  have h_stk : stk = stk_h := by finish,
-  induction li',
-  case list.nil {
-    simp [list.length],
-    subst i_h,
-    subst s_h,
-    subst stk_h,
-    exact h_conds,
-  },  
-  case list.cons {
-    split,
-    {
-      -- have h_eq : (↑(list.length li'_tl) + i, s, stk) = (i, s, stk), from li'_ih.left,
-      -- have h_surprise : (↑(list.length (li'_hd :: li'_tl)) + i, s, stk) = (↑(list.length li'_tl) + i, s, stk), from sorry,
-      -- simp at h_surprise,
-      -- have h_rfl : (i, s, stk) = (↑(list.length (li'_hd :: li'_tl)) + i, s, stk) :=
-      -- begin
-      --   have h_eq_rfl : (i, s, stk) = (↑(list.length li'_tl) + i, s, stk) := by sorry,
-      --   sorry,
-      -- end,
-      -- rw [h_eq],
-      simp,
-      -- simp [list.zero_le_length],
-      have h_list_nneg : 0 ≤ ↑(list.length li'_tl) := begin
-        apply list.zero_le_length,
-      end,
-      
       -- how can this ever be true? ↑(list.length li'_tl) + 1 = 0
-      -- prove false
       sorry,
     },
-    split,
     {
-      simp,
       simp [nth],
       by_cases h_izero : (i = 0),
       {
         simp [h_izero],
-        sorry,
-      },
-      {
-        simp [h_izero],
-        have ih_eq : (↑(list.length li'_tl) + i', s', stk') = iexec (nth (li'_tl ++ li) i) (i, s, stk), from li'_ih.right.left,
+        split,
+        {
+          simp [h_izero] at h_conds, 
+          -- specialize li'_ih h_conds.left,
+          simp [h_izero] at *,
 
-        -- (↑(list.length li'_tl) + 1 + i', s', stk') = iexec (nth (li'_tl ++ li) (i - 1)) (i, s, stk)
-        sorry,
-        /-
-        code from appendR:
-        simp [h_izero] at h_conds,
-        simp [nth],
-        simp [h_izero],
-        have h_append_eq : nth (li_tl ++ li') (i - 1) = nth li_tl (i - 1) :=
-        begin 
-          rw [nth_append],
-          {
-            have h_ite : i - 1 < int.of_nat (list.length li_tl) :=
-            begin
-              have h_less : i < ↑(list.length li_tl) + 1, from h_conds.right.right,
-              simp,
-              linarith,
-            end,
-            simp [h_ite],
-            intro h_more,
-            simp at h_ite,
-            apply false.elim,
-            linarith,
-          },
-          {exact h_ipos,},
-        end,
-        rw h_conds.left,
-        rw h_append_eq,-/
+          
+        },
+        linarith,
       },
+      {sorry,}
     },
-    split,
-    {
-      subst h_i, 
-      apply h_conds.right.left,
-    },
-    {
-      norm_num,
-      have h_initial : i < list.length li := 
-      begin 
-        subst i_h,
-        apply h_conds.right.right,
-      end,
-      have h_full : list.length li ≤ list.length li'_tl + list.length li := by simp, -- from inequality def
-      linarith,
-    }
-  },
-  -/
+  }
 end
 
 /-
@@ -828,34 +742,37 @@ lemma exec_appendL:
   P' @ P ⊢ (size(P')+i,s,stk) →* (size(P')+i',s',stk')"
   by (induction rule: exec_induct) (blast intro: star.step exec1_appendL)+
 -/
--- lemma exec_appendL {i i'} 
 lemma exec_appendL {i i' :ℤ} {li li' i s stk i' s' stk'}
 (h_single : exec li (i, s, stk) (i', s', stk')) :
 exec (li' ++ li) (list.length li' + i, s, stk) (list.length li' + i', s', stk') :=
 begin
   induction' h_single,
   case LoComp.rtc.star.refl {
-    fconstructor,
+    apply rtc.star.refl,
   },
-  case LoComp.rtc.star.tail {
+  case LoComp.rtc.star.tail : b hab hbc ih{
+    have h_b : b = (i', s', stk') :=
+    begin
+      sorry,
+    end,
     apply rtc.star.tail,
     {      
-      have h_b : b = (i', s', stk') := sorry, -- no clue how to get this 
       specialize ih h_b,
       apply li',
       apply ih,
     },
     {
       apply exec1_appendL,
-      apply i,
-      apply i,
-      have h_b : b = (i', s', stk') := sorry, -- no clue how to get this 
-      simp [h_b] at h,
-      exact h,
+      simp [h_b] at hbc,
+      exact hbc,
     },
   },
 end
 
+-- have h_b : b = (i', s', stk') :=
+    -- begin
+    --   sorry,
+    -- end,
 /-
 text‹Now we specialise the above lemmas to enable automatic proofs of
 \<^prop>‹P ⊢ c →* c'› where ‹P› is a mixture of concrete instructions and
@@ -1081,6 +998,106 @@ next
 qed fastforce+
 
 end
+
+/-
+  simp only [exec1],
+  obtain ⟨i_h, s_h, stk_h, hi, h_conds⟩ := h_li,
+  use i,
+  use s,
+  use stk,
+  have h_i : i = i_h := by finish,
+  have h_s : s = s_h := by finish,
+  have h_stk : stk = stk_h := by finish,
+  induction li',
+  case list.nil {
+    simp [list.length],
+    subst i_h,
+    subst s_h,
+    subst stk_h,
+    exact h_conds,
+  },  
+  case list.cons {
+    split,
+    {
+      -- have h_eq : (↑(list.length li'_tl) + i, s, stk) = (i, s, stk), from li'_ih.left,
+      -- have h_surprise : (↑(list.length (li'_hd :: li'_tl)) + i, s, stk) = (↑(list.length li'_tl) + i, s, stk), from sorry,
+      -- simp at h_surprise,
+      -- have h_rfl : (i, s, stk) = (↑(list.length (li'_hd :: li'_tl)) + i, s, stk) :=
+      -- begin
+      --   have h_eq_rfl : (i, s, stk) = (↑(list.length li'_tl) + i, s, stk) := by sorry,
+      --   sorry,
+      -- end,
+      -- rw [h_eq],
+      simp,
+      -- simp [list.zero_le_length],
+      have h_list_nneg : 0 ≤ ↑(list.length li'_tl) := begin
+        apply list.zero_le_length,
+      end,
+      
+      -- how can this ever be true? ↑(list.length li'_tl) + 1 = 0
+      -- prove false
+      sorry,
+    },
+    split,
+    {
+      simp,
+      simp [nth],
+      by_cases h_izero : (i = 0),
+      {
+        simp [h_izero],
+        sorry,
+      },
+      {
+        simp [h_izero],
+        have ih_eq : (↑(list.length li'_tl) + i', s', stk') = iexec (nth (li'_tl ++ li) i) (i, s, stk), from li'_ih.right.left,
+
+        -- (↑(list.length li'_tl) + 1 + i', s', stk') = iexec (nth (li'_tl ++ li) (i - 1)) (i, s, stk)
+        sorry,
+        /-
+        code from appendR:
+        simp [h_izero] at h_conds,
+        simp [nth],
+        simp [h_izero],
+        have h_append_eq : nth (li_tl ++ li') (i - 1) = nth li_tl (i - 1) :=
+        begin 
+          rw [nth_append],
+          {
+            have h_ite : i - 1 < int.of_nat (list.length li_tl) :=
+            begin
+              have h_less : i < ↑(list.length li_tl) + 1, from h_conds.right.right,
+              simp,
+              linarith,
+            end,
+            simp [h_ite],
+            intro h_more,
+            simp at h_ite,
+            apply false.elim,
+            linarith,
+          },
+          {exact h_ipos,},
+        end,
+        rw h_conds.left,
+        rw h_append_eq,-/
+      },
+    },
+    split,
+    {
+      subst h_i, 
+      apply h_conds.right.left,
+    },
+    {
+      norm_num,
+      have h_initial : i < list.length li := 
+      begin 
+        subst i_h,
+        apply h_conds.right.right,
+      end,
+      have h_full : list.length li ≤ list.length li'_tl + list.length li := by simp, -- from inequality def
+      linarith,
+    }
+  },
+  -/
+
 -/
 
 
