@@ -701,16 +701,31 @@ begin
   case list.cons {
     simp [exec1],
     simp [exec1] at li'_ih,
-    obtain ⟨i, s, stk, hi, h_conds⟩ := h_li,
+    obtain ⟨ih, sh, stkh, hi, h_conds⟩ := h_li,
     use i,
     use s,
     use stk,
     simp at hi,
+    -- simp [hi] at h_conds,
+    have h_i : ih = i := 
+    begin symmetry, exact hi.left, end,
+    have h_s : sh = s := 
+    begin symmetry, exact hi.right.left, end,
+    have h_stk : stkh = stk := 
+    begin symmetry, exact hi.right.right, end,
+    rw [h_i] at h_conds,
+    rw [h_s] at h_conds,
+    rw [h_stk] at h_conds,
+    clear h_i,
+    clear h_s,
+    clear h_stk,
     split,
     {
       simp [hi],
+      specialize li'_ih h_conds.left,
+      specialize li'_ih h_conds.right.left,
+      specialize li'_ih h_conds.right.right,
       -- how to use this: specialize li'_ih h_conds.left,
-
       -- how can this ever be true? ↑(list.length li'_tl) + 1 = 0
       sorry,
     },
@@ -721,15 +736,65 @@ begin
         simp [h_izero],
         split,
         {
-          simp [h_izero] at h_conds, 
-          -- specialize li'_ih h_conds.left,
-          simp [h_izero] at *,
+          specialize li'_ih h_conds.left,
 
+          specialize li'_ih h_conds.right.left,
+          specialize li'_ih h_conds.right.right,
+          cases li'_ih with i_ih li'_ih_i,
+          cases li'_ih_i with s_ih li'_ih_i_s,
+          cases li'_ih_i_s with stk_ih li'_ih_full,
           
+          have ih_left : ↑(list.length li'_tl) + i = i_ih ∧ s = s_ih ∧ stk = stk_ih, from li'_ih_full.left,
+          have h_i : i_ih = ↑(list.length li'_tl) + i := 
+            begin symmetry, exact ih_left.left, end,
+          have h_s : s_ih = s := 
+            begin symmetry, exact ih_left.right.left, end,
+          have h_stk : stk_ih = stk := 
+            begin symmetry, exact ih_left.right.right, end,
+          rw [h_i] at li'_ih_full,
+          rw [h_s] at li'_ih_full,
+          rw [h_stk] at li'_ih_full,
+          simp [nth_append] at li'_ih_full,
+
+          simp [h_izero] at h_conds,
+
+          -- maybe iexec shift can be applied here?
+          sorry,
         },
         linarith,
       },
-      {sorry,}
+      {
+        simp [h_izero],
+        split,
+        {
+
+          specialize li'_ih h_conds.left,
+
+          specialize li'_ih h_conds.right.left,
+          specialize li'_ih h_conds.right.right,
+          cases li'_ih with i_ih li'_ih_i,
+          cases li'_ih_i with s_ih li'_ih_i_s,
+          cases li'_ih_i_s with stk_ih li'_ih_full,
+          
+          have ih_left : ↑(list.length li'_tl) + i = i_ih ∧ s = s_ih ∧ stk = stk_ih, from li'_ih_full.left,
+          have h_i : i_ih = ↑(list.length li'_tl) + i := 
+            begin symmetry, exact ih_left.left, end,
+          have h_s : s_ih = s := 
+            begin symmetry, exact ih_left.right.left, end,
+          have h_stk : stk_ih = stk := 
+            begin symmetry, exact ih_left.right.right, end,
+          rw [h_i] at li'_ih_full,
+          rw [h_s] at li'_ih_full,
+          rw [h_stk] at li'_ih_full,
+          simp [nth_append] at li'_ih_full,
+          
+          -- the gap does not seem to easily add upg
+          sorry,
+        },
+        split,
+        {apply h_conds.right.left},
+        {linarith,}
+      }
     },
   }
 end
