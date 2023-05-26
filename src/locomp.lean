@@ -834,10 +834,6 @@ begin
   },
 end
 
--- have h_b : b = (i', s', stk') :=
-    -- begin
-    --   sorry,
-    -- end,
 /-
 text‹Now we specialise the above lemmas to enable automatic proofs of
 \<^prop>‹P ⊢ c →* c'› where ‹P› is a mixture of concrete instructions and
@@ -954,13 +950,13 @@ inductive aexp : Type
 
 open aexp
 
-def eval (env : string → ℤ) : aexp → ℤ
-| (num i)     := i
-| (var x)     := env x
-| (add e₁ e₂) := eval e₁ + eval e₂
-| (sub e₁ e₂) := eval e₁ - eval e₂
-| (mul e₁ e₂) := eval e₁ * eval e₂
-| (div e₁ e₂) := eval e₁ / eval e₂
+def eval  : aexp → state → ℤ
+| (num i) s    := i
+| (var x) s    := s x
+| (add e₁ e₂) s := eval e₁ s + eval e₂ s
+| (sub e₁ e₂) s := eval e₁ s - eval e₂ s
+| (mul e₁ e₂) s := eval e₁ s * eval e₂ s
+| (div e₁ e₂) s := eval e₁ s / eval e₂ s
 
 
 def acomp : aexp → list instr
@@ -977,6 +973,33 @@ lemma acomp_correct[intro]:
   "acomp a ⊢ (0,s,stk) →* (size(acomp a),s,aval a s#stk)"
 by (induction a arbitrary: stk) fastforce+
 
+-/
+
+lemma acomp_correct {a : aexp}  {s : state}  {stk : stack} :
+exec (acomp a) (0, s, stk) (list.length (acomp a), s, (eval a s) :: stk) :=
+begin
+  induction a generalizing stk,
+  case num {
+    simp [acomp, eval],
+    -- simp [exec_cons_1],
+    sorry,
+  },
+  case var {
+    simp [acomp, eval],
+    sorry,
+  },
+  case add {
+    simp [acomp],
+    sorry,
+  },
+  case sub {sorry,},
+  case mul {sorry,},
+  case div {sorry,},
+
+end
+
+
+/-
 fun bcomp :: "bexp ⇒ bool ⇒ int ⇒ instr list" where
 "bcomp (Bc v) f n = (if v=f then [JMP n] else [])" |
 "bcomp (Not b) f n = bcomp b (¬f) n" |
