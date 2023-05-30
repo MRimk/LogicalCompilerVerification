@@ -1168,6 +1168,15 @@ next
 qed fastforce+
 -/
 
+lemma not_not_eq {α β : Prop}
+(h_not_eq : ¬ (α = β)) :
+α = ¬ β :=
+begin
+  rw [eq_iff_iff] at *,
+  rw [not_iff] at h_not_eq,
+  apply iff.not_right,
+  exact h_not_eq,
+end
 
 lemma bcomp_correct {n: ℤ} { b f s stk}
 (h_nneg : 0 ≤  n) :
@@ -1196,14 +1205,112 @@ begin
       {simp, sorry} --TODO: prove false ?????
     }
   },
-  case Not {
-    sorry,
+  case Not : b{
+    specialize b_ih h_nneg,
+    apply ¬ f,
+    -- apply rtc.star.single,
+    simp [bcomp],
+    rw [bval],
+    --TODO: could i just do this : (¬f) = bval b s == f = ¬bval b s
+    by_cases h_bisf : (f = bval b s),
+    {
+      simp [h_bisf],
+      rw [h_bisf] at b_ih,
+      simp * at b_ih,
+      exact b_ih,
+    },
+    {
+      have h_fneg : f = ¬ bval b s := 
+      begin
+        apply not_not_eq,
+        exact h_bisf,
+      end,
+      simp [h_fneg],
+      rw [h_fneg] at b_ih,
+      simp * at b_ih,
+      exact b_ih,
+    }
   },
-  case And {
-    sorry,
+  case And : b1 b2 ih1 ih2{
+    specialize ih1 h_nneg,
+    apply f,
+    specialize ih2 h_nneg,
+    apply f,
+    simp [bcomp],
+    rw [bval],
+    by_cases hf : (f = true),
+    {
+      simp at *,
+      simp [hf] at ih1 ih2,
+      simp [hf],
+
+      -- apply exec_append_trans,
+      -- apply int.of_nat (list.length (bcomp b1 false ↑(list.length (bcomp b2 true n)))),
+      sorry, -- TODO: have an exec not like ih but (bcomp b1 false (↑(list.length (bcomp b2 false n)) + n))
+    },
+    {
+      simp at *,
+      simp [hf] at ih1 ih2,
+      simp [hf],
+
+      -- apply exec_append_trans,
+      -- apply ↑(list.length (bcomp b1 false n)) + ite (f = bval b1 s) n 0,
+      sorry, -- TODO: have an exec not like ih but (bcomp b1 false (↑(list.length (bcomp b2 false n)) + n))
+
+    }
   },
-  case Less {
-    sorry,
+  case Less : a1 a2{
+    -- apply rtc.star.single,
+    simp [bcomp],
+    rw [bval],
+    -- acomp a1 ++ (acomp a2 ++ ite (f = true) [JMPLESS n] [JMPGE n])
+    apply exec_append_trans,
+    apply int.of_nat (list.length (acomp a1)),
+    apply acomp_correct,
+    simp,
+    {
+      simp,
+      -- (acomp a2 ++ ite (f = true) [JMPLESS n] [JMPGE n])
+      apply exec_append_trans,
+      apply int.of_nat (list.length (acomp a2)),
+      apply acomp_correct,
+      simp,
+      {
+        simp,
+        by_cases h_f : (f = true),
+        { -- [JMPLESS]
+          simp [h_f],
+          apply rtc.star.single,
+          apply exec1I,
+          {
+            simp [nth],
+            simp [iexec],
+            --TODO: carry in the correct resulting config i and solve from there
+            sorry,
+          },
+          linarith,
+          simp,
+        },
+        { -- [JMPGE]
+          simp [h_f],
+          apply rtc.star.single,
+          apply exec1I,
+          {
+            simp [nth],
+            simp [iexec],
+            --TODO: carry in the correct resulting config i and solve from there
+            sorry,
+          },
+          linarith,
+          simp,
+        },
+      },
+      sorry, -- TODO: ?m_1 & ?m_2 !!!!
+      apply ↑(list.length (ite (f = true) [JMPLESS n] [JMPGE n])) + ite (f = (eval a1 s < eval a2 s)) n 0,
+    },
+    sorry, -- TODO: ?m_1 !!!!
+    apply (↑(list.length (acomp a2)) + ↑(list.length (ite (f = true) [JMPLESS n] [JMPGE n]))) +
+  ite (f = (eval a1 s < eval a2 s)) n 0,
   }
 
 end
@@ -1239,7 +1346,7 @@ inductive com : Type
 
 open com
 
-def ccomp : com → list instr
+noncomputable def ccomp : com → list instr
 | com.SKIP := []
 | (Assign x a) := acomp a ++ [STORE x]
 | (Seq c1 c2) := ccomp c1 ++ ccomp c2
@@ -1295,6 +1402,15 @@ qed fastforce+
 
 end
 -/
+
+-- lemma ccomp_bigstep {c : com} { s : state } {t : state } {stk : stack} -- TODO: how to write this (c,s) ?
+-- (h1 : (c, s))
+-- (h2 : t) :
+-- exec (ccomp c) (0, s, stk) (list.length (ccomp c), t, stk) :=
+-- begin
+--   -- induction c generalizing stk,
+--   sorry,
+-- end
 
 
 end LoComp
