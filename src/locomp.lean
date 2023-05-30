@@ -212,10 +212,10 @@ open instr
 def iexec : instr → config → config
 | (LOADI n) (i, s, stk) := (i + 1, s, n :: stk)
 | (LOAD v) (i, s, stk) := (i + 1, s, s v :: stk)
-| ADD (i, s, stk) := (i + 1, s, (head2 stk + stk.head) :: tail2 stk)
-| SUB (i, s, stk) := (i + 1, s, (head2 stk - stk.head) :: tail2 stk)
-| MUL (i, s, stk) := (i + 1, s, (head2 stk * stk.head) :: tail2 stk)
-| DIV (i, s, stk) := (i + 1, s, (head2 stk / stk.head) :: tail2 stk)
+| ADD (i, s, stk) := (i + 1, s, (stk.tail.head + stk.head) :: stk.tail.tail)
+| SUB (i, s, stk) := (i + 1, s, (stk.tail.head - stk.head) :: stk.tail.tail)
+| MUL (i, s, stk) := (i + 1, s, (stk.tail.head * stk.head) :: stk.tail.tail)
+| DIV (i, s, stk) := (i + 1, s, (stk.tail.head / stk.head) :: stk.tail.tail)
 | (STORE v) (i, s, stk) := (i + 1, s{v ↦ (stk.head)}, stk.tail)
 | (JMP n) (i, s, stk) := (i + 1 + n, s, stk)
 | (JMPLESS n) (i, s, stk) := 
@@ -994,28 +994,41 @@ begin
   },
   case add : a b a_i b_i{
     simp [acomp],
-    apply rtc.star.single,
-    apply exec1I,
-    {
-      simp [eval],
-      simp [nth_append],
-      by_cases h_pos : (0 < list.length (acomp a)),
-      {
-        simp [h_pos],
-        sorry,
-      },
-      {
-        simp [h_pos],
-        sorry,
-      },
-    },
-    {
-      linarith,
-    },
+    --trans a ++ (b ++ [ADD])
+    apply exec_append_trans,
+    apply int.of_nat(↑(list.length (acomp b)) + 1),
+    exact a_i,
+    simp,
     {
       simp,
-      linarith,
-    }
+      --trans b ++ [ADD]
+      apply exec_append_trans,
+      apply int.of_nat(1),
+      exact b_i,
+      simp,
+      {   -- TODO: how to specify ?m_1? We know that it should be 1, but there is no place to specify it
+        simp,
+        --exec1 [ADD]
+        apply rtc.star.single,
+        apply exec1I,
+        {
+          simp [nth],
+          simp [iexec],
+          split,
+          sorry,
+          simp [eval],
+        },
+        linarith,
+        simp,
+      },
+      -- TODO: how to specify ?m_1 and ?m_2? We know that ?m_1 should be ↑(list.length (acomp b)) + ?m_2 and ?m_2 should be 1, but there is no place to specify it
+      {sorry},
+      apply int.of_nat(list.length (acomp a)),
+
+    },
+    -- TODO: how to specify ?m_1 and ?m_2? We know that ?m_1 should be ↑(list.length (acomp b)) + 1, but there is no place to specify it
+    {sorry},
+    apply int.of_nat (list.length (acomp b) + 1),
   },
   case sub : a b a_i b_i{
     simp [acomp],
