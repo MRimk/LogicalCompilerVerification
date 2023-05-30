@@ -437,7 +437,7 @@ end
 
 
 @[simp]
-theorem list.zero_le_length {α : Type} (l : list α) : 0 ≤ list.length l :=
+theorem list.length_nneg {α : Type} (l : list α) : 0 ≤ list.length l :=
 begin
   induction l with hd tl hl,
   case list.nil { simp,},
@@ -981,19 +981,103 @@ begin
   induction a generalizing stk,
   case num {
     simp [acomp, eval],
-    sorry,
+    apply rtc.star.single,
+    apply exec1I,
+    {
+      simp [nth],
+      simp[iexec],
+    },
+    {
+      linarith,
+    },
+    {
+      simp,
+    }
   },
   case var {
     simp [acomp, eval],
-    sorry,
+    apply rtc.star.single,
+    apply exec1I,
+    {
+      simp [nth],
+      simp[iexec],
+    },
+    {
+      linarith,
+    },
+    {
+      simp,
+    }
   },
   case add {
     simp [acomp],
-    sorry,
+    apply rtc.star.single,
+    apply exec1I,
+    {
+      -- simp [nth],
+      -- simp[iexec],
+      sorry,
+    },
+    {
+      linarith,
+    },
+    {
+      simp,
+      linarith,
+    }
   },
-  case sub {sorry,},
-  case mul {sorry,},
-  case div {sorry,},
+  case sub {
+    simp [acomp],
+    apply rtc.star.single,
+    apply exec1I,
+    {
+      -- simp [nth],
+      -- simp[iexec],
+      sorry,
+    },
+    {
+      linarith,
+    },
+    {
+      simp,
+      linarith,
+    }
+  },
+  case mul {
+    simp [acomp],
+    apply rtc.star.single,
+    apply exec1I,
+    {
+      -- simp [nth],
+      -- simp[iexec],
+      sorry,
+    },
+    {
+      linarith,
+    },
+    {
+      simp,
+      linarith,
+    }
+  },
+  case div {
+    simp [acomp],
+    apply rtc.star.single,
+    apply exec1I,
+    {
+      -- simp [nth],
+      -- simp[iexec],
+      sorry,
+    },
+    {
+      linarith,
+    },
+    {
+      simp,
+      linarith,
+    }
+  
+  },
 
 end
 
@@ -1013,7 +1097,35 @@ fun bcomp :: "bexp ⇒ bool ⇒ int ⇒ instr list" where
 value
   "bcomp (And (Less (V ''x'') (V ''y'')) (Not(Less (V ''u'') (V ''v''))))
      False 3"
+-/
 
+inductive bexp : Type
+| Bc : Prop → bexp
+| Not : bexp → bexp
+| And : bexp → bexp → bexp
+| Less : aexp → aexp → bexp
+
+open bexp
+
+def bcomp : bexp → Prop → ℤ → list instr
+|  (Bc v) f n := 
+if v = f 
+then [JMP n] 
+else []
+|  (Not b) f n := bcomp b (¬ f) n
+|  (And b1 b2) f n := (
+  sorry
+  -- let cb2 = bcomp b2 f n;
+        -- m = if f then list.length cb2 else (list.length cb2)+n;
+      -- cb1 = bcomp b1 False m
+  -- in cb1 ++ cb2
+)
+| (Less a1 a2) f n := acomp a1 ++ acomp a2 ++ (
+  if f 
+  then [JMPLESS n] 
+  else [JMPGE n]
+  )
+/-
 lemma bcomp_correct[intro]:
   fixes n :: int
   shows
@@ -1116,9 +1228,9 @@ end
       -- end,
       -- rw [h_eq],
       simp,
-      -- simp [list.zero_le_length],
+      -- simp [list.length_nneg],
       have h_list_nneg : 0 ≤ ↑(list.length li'_tl) := begin
-        apply list.zero_le_length,
+        apply list.length_nneg,
       end,
       
       -- how can this ever be true? ↑(list.length li'_tl) + 1 = 0
