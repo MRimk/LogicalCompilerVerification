@@ -264,24 +264,7 @@ lemma exec1I {li : list instr} {i s stk c'}
     simp [h1, h2, h3]
   end
 
--- lemma exec_trans {li : list instr} {c1 c2 c3 : config}
---   (h1 : exec1 li c1 c2)
---   (h2 : exec1 li c2 c3) :
---   exec1 li c1 c3 :=
---   begin
---     -- Use the definition of exec1 to unpack the assumptions
 
---     rcases h1 with ⟨i1, s1, stk1, hc1, hc2, hi1⟩,
---     rcases h2 with ⟨i2, s2, stk2, hc2', hc3, hi2⟩,
---     -- Use transitivity of execution to relate the two configurations
---     -- subst hc2,
---     have h : i1 < li.length,
---     { linarith [hi1, hi2] },
---     -- Apply exec1I lemma to obtain the transitivity lemma
---     -- exact exec1I hc3 hi1.left h,
---     sorry
---     -- TODO: replace exec1 right side of c3 with h1 items 
---   end
 
 
 
@@ -1009,14 +992,22 @@ begin
       simp,
     }
   },
-  case add {
+  case add : a b a_i b_i{
     simp [acomp],
     apply rtc.star.single,
     apply exec1I,
     {
-      -- simp [nth],
-      -- simp[iexec],
-      sorry,
+      simp [eval],
+      simp [nth_append],
+      by_cases h_pos : (0 < list.length (acomp a)),
+      {
+        simp [h_pos],
+        sorry,
+      },
+      {
+        simp [h_pos],
+        sorry,
+      },
     },
     {
       linarith,
@@ -1026,14 +1017,22 @@ begin
       linarith,
     }
   },
-  case sub {
+  case sub : a b a_i b_i{
     simp [acomp],
     apply rtc.star.single,
     apply exec1I,
     {
-      -- simp [nth],
-      -- simp[iexec],
-      sorry,
+      simp [eval],
+      simp [nth_append],
+      by_cases h_pos : (0 < list.length (acomp a)),
+      {
+        simp [h_pos],
+        sorry,
+      },
+      {
+        simp [h_pos],
+        sorry,
+      },
     },
     {
       linarith,
@@ -1043,14 +1042,22 @@ begin
       linarith,
     }
   },
-  case mul {
+  case mul : a b a_i b_i{
     simp [acomp],
     apply rtc.star.single,
     apply exec1I,
     {
-      -- simp [nth],
-      -- simp[iexec],
-      sorry,
+      simp [eval],
+      simp [nth_append],
+      by_cases h_pos : (0 < list.length (acomp a)),
+      {
+        simp [h_pos],
+        sorry,
+      },
+      {
+        simp [h_pos],
+        sorry,
+      },
     },
     {
       linarith,
@@ -1060,14 +1067,22 @@ begin
       linarith,
     }
   },
-  case div {
+  case div : a b a_i b_i{
     simp [acomp],
     apply rtc.star.single,
     apply exec1I,
     {
-      -- simp [nth],
-      -- simp[iexec],
-      sorry,
+      simp [eval],
+      simp [nth_append],
+      by_cases h_pos : (0 < list.length (acomp a)),
+      {
+        simp [h_pos],
+        sorry,
+      },
+      {
+        simp [h_pos],
+        sorry,
+      },
     },
     {
       linarith,
@@ -1107,24 +1122,24 @@ inductive bexp : Type
 
 open bexp
 
-def bcomp : bexp → Prop → ℤ → list instr
-|  (Bc v) f n := 
-if v = f 
-then [JMP n] 
-else []
-|  (Not b) f n := bcomp b (¬ f) n
-|  (And b1 b2) f n := (
-  sorry
-  -- let cb2 = bcomp b2 f n;
-        -- m = if f then list.length cb2 else (list.length cb2)+n;
-      -- cb1 = bcomp b1 False m
-  -- in cb1 ++ cb2
-)
-| (Less a1 a2) f n := acomp a1 ++ acomp a2 ++ (
-  if f 
-  then [JMPLESS n] 
-  else [JMPGE n]
-  )
+-- def bcomp : bexp → Prop → ℤ → list instr
+-- |  (Bc v) f n := 
+-- if v = f 
+-- then [JMP n] 
+-- else []
+-- |  (Not b) f n := bcomp b (¬ f) n
+-- |  (And b1 b2) f n := (
+--   sorry
+--   -- let cb2 = bcomp b2 f n;
+--         -- m = if f then list.length cb2 else (list.length cb2)+n;
+--       -- cb1 = bcomp b1 False m
+--   -- in cb1 ++ cb2
+-- )
+-- | (Less a1 a2) f n := acomp a1 ++ acomp a2 ++ (
+--   if f 
+--   then [JMPLESS n] 
+--   else [JMPGE n]
+--   )
 /-
 lemma bcomp_correct[intro]:
   fixes n :: int
