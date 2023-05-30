@@ -226,7 +226,7 @@ def iexec : instr → config → config
   if (head2 stk) ≥ (stk.head)
   then (i + 1 + n, s, tail2 stk)
   else (i + 1, s, tail2 stk)
-| NOP (i, s, stk) := (i + 1, s, stk)
+| NOP (i, s, stk) := (i, s, stk)
 
 /- redefinition for ints rather than nat -/ 
 def nth : list instr → ℤ → instr  
@@ -413,8 +413,6 @@ begin
   },
   case NOP {
     simp [iexec],
-    intros h1 h2,
-    apply iexec_shift_without_jmp,
   },
 end
 
@@ -1134,25 +1132,23 @@ inductive bexp : Type
 | Less : aexp → aexp → bexp
 
 open bexp
+def bval : bexp → state → Prop
+| (Bc v) s    := v
+| (Not b) s   := ¬(bval b s)
+| (And b1 b2) s := bval b1 s ∧ bval b2 s
+| (Less a1 a2) s := (eval a1 s) < (eval a2 s) 
 
--- def bcomp : bexp → Prop → ℤ → list instr
--- |  (Bc v) f n := 
--- if v = f 
--- then [JMP n] 
--- else []
--- |  (Not b) f n := bcomp b (¬ f) n
--- |  (And b1 b2) f n := (
---   sorry
---   -- let cb2 = bcomp b2 f n;
---         -- m = if f then list.length cb2 else (list.length cb2)+n;
---       -- cb1 = bcomp b1 False m
---   -- in cb1 ++ cb2
--- )
--- | (Less a1 a2) f n := acomp a1 ++ acomp a2 ++ (
---   if f 
---   then [JMPLESS n] 
---   else [JMPGE n]
---   )
+noncomputable def bcomp : bexp → Prop → ℤ → list instr  --TODO: find out whether noncomputable is okay
+| (Bc v) f n := if (v = f) then [JMP n] else []
+| (Not b) f n :=  bcomp b (¬ f) n
+| (And b1 b2) f n := 
+    let cb2 := bcomp b2 f n,
+      m := if (f = true) then int.of_nat (list.length cb2) else int.of_nat (list.length cb2) + n,
+      cb1 := bcomp b1 ff m
+    in cb1 ++ cb2
+| (Less a1 a2) f n := acomp a1 ++ acomp a2 ++ 
+  (if (f = true) then [JMPLESS n] else [JMPGE n])
+
 /-
 lemma bcomp_correct[intro]:
   fixes n :: int
@@ -1170,7 +1166,51 @@ next
        And(2)[of n f] And(3) 
   show ?case by fastforce
 qed fastforce+
+-/
 
+
+lemma bcomp_correct {n: ℤ} { b f s stk}
+(h_nneg : 0 ≤  n) :
+exec (bcomp b f n) (0, s, stk) (list.length (bcomp b f n) + (if (f = bval b s) then n else 0), s, stk) :=
+begin
+  induction b generalizing f n,
+  case Bc {
+    apply rtc.star.single,
+    simp [bcomp],
+    rw [bval],
+    by_cases h_bisf : (b = f),
+    {
+      simp [h_bisf],
+      apply exec1I,
+      {simp [nth],simp[iexec],},
+      {linarith,},
+      {simp,}
+    },
+    {
+      simp [h_bisf],
+      have h_fnotb : ¬ f = b := by cc, 
+      simp [h_fnotb],
+      apply exec1I,
+      {simp [nth], simp [iexec],},
+      {linarith,},
+      {simp, sorry} --TODO: prove false ?????
+    }
+  },
+  case Not {
+    sorry,
+  },
+  case And {
+    sorry,
+  },
+  case Less {
+    sorry,
+  }
+
+end
+
+
+
+/-
 fun ccomp :: "com ⇒ instr list" where
 "ccomp SKIP = []" |
 "ccomp (x ::= a) = acomp a @ [STORE x]" |
@@ -1188,7 +1228,36 @@ value "ccomp
   ELSE ''v'' ::= V ''u'')"
 
 value "ccomp (WHILE Less (V ''u'') (N 1) DO (''u'' ::= Plus (V ''u'') (N 1)))"
+-/
 
+inductive com : Type
+| SKIP : com
+| Assign : vname → aexp → com
+| Seq : com → com → com
+| If : bexp → com → com → com
+| While : bexp → com → com
+
+open com
+
+def ccomp : com → list instr
+| com.SKIP := []
+| (Assign x a) := acomp a ++ [STORE x]
+| (Seq c1 c2) := ccomp c1 ++ ccomp c2
+| (If b c1 c2) := (
+  let cc1 := ccomp c1,
+    cc2 := ccomp c2,
+    cb := bcomp b false (list.length cc1 + 1)
+  in cb ++ cc1 ++ (JMP (list.length cc2) :: cc2)
+)
+| (While b c) := (
+  let cc := ccomp c,
+    cb := bcomp b false (list.length cc + 1)
+  in cb ++ cc ++ [JMP (-(list.length cb + list.length cc + 1))] 
+)
+
+
+
+/-
 
 subsection "Preservation of semantics"
 
@@ -1225,106 +1294,6 @@ next
 qed fastforce+
 
 end
-
-/-
-  simp only [exec1],
-  obtain ⟨i_h, s_h, stk_h, hi, h_conds⟩ := h_li,
-  use i,
-  use s,
-  use stk,
-  have h_i : i = i_h := by finish,
-  have h_s : s = s_h := by finish,
-  have h_stk : stk = stk_h := by finish,
-  induction li',
-  case list.nil {
-    simp [list.length],
-    subst i_h,
-    subst s_h,
-    subst stk_h,
-    exact h_conds,
-  },  
-  case list.cons {
-    split,
-    {
-      -- have h_eq : (↑(list.length li'_tl) + i, s, stk) = (i, s, stk), from li'_ih.left,
-      -- have h_surprise : (↑(list.length (li'_hd :: li'_tl)) + i, s, stk) = (↑(list.length li'_tl) + i, s, stk), from sorry,
-      -- simp at h_surprise,
-      -- have h_rfl : (i, s, stk) = (↑(list.length (li'_hd :: li'_tl)) + i, s, stk) :=
-      -- begin
-      --   have h_eq_rfl : (i, s, stk) = (↑(list.length li'_tl) + i, s, stk) := by sorry,
-      --   sorry,
-      -- end,
-      -- rw [h_eq],
-      simp,
-      -- simp [list.length_nneg],
-      have h_list_nneg : 0 ≤ ↑(list.length li'_tl) := begin
-        apply list.length_nneg,
-      end,
-      
-      -- how can this ever be true? ↑(list.length li'_tl) + 1 = 0
-      -- prove false
-      sorry,
-    },
-    split,
-    {
-      simp,
-      simp [nth],
-      by_cases h_izero : (i = 0),
-      {
-        simp [h_izero],
-        sorry,
-      },
-      {
-        simp [h_izero],
-        have ih_eq : (↑(list.length li'_tl) + i', s', stk') = iexec (nth (li'_tl ++ li) i) (i, s, stk), from li'_ih.right.left,
-
-        -- (↑(list.length li'_tl) + 1 + i', s', stk') = iexec (nth (li'_tl ++ li) (i - 1)) (i, s, stk)
-        sorry,
-        /-
-        code from appendR:
-        simp [h_izero] at h_conds,
-        simp [nth],
-        simp [h_izero],
-        have h_append_eq : nth (li_tl ++ li') (i - 1) = nth li_tl (i - 1) :=
-        begin 
-          rw [nth_append],
-          {
-            have h_ite : i - 1 < int.of_nat (list.length li_tl) :=
-            begin
-              have h_less : i < ↑(list.length li_tl) + 1, from h_conds.right.right,
-              simp,
-              linarith,
-            end,
-            simp [h_ite],
-            intro h_more,
-            simp at h_ite,
-            apply false.elim,
-            linarith,
-          },
-          {exact h_ipos,},
-        end,
-        rw h_conds.left,
-        rw h_append_eq,-/
-      },
-    },
-    split,
-    {
-      subst h_i, 
-      apply h_conds.right.left,
-    },
-    {
-      norm_num,
-      have h_initial : i < list.length li := 
-      begin 
-        subst i_h,
-        apply h_conds.right.right,
-      end,
-      have h_full : list.length li ≤ list.length li'_tl + list.length li := by simp, -- from inequality def
-      linarith,
-    }
-  },
-  -/
-
 -/
 
 
