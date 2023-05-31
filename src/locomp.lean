@@ -1214,7 +1214,7 @@ lemma bcomp_correct {n: ℤ} { b f s stk}
 exec (bcomp b f n) (0, s, stk) (list.length (bcomp b f n) + (if (f = bval b s) then n else 0), s, stk) :=
 begin
   induction b generalizing f n,
-  case Bc {
+  case Bc { --INCOMPLETE: list.nil edgecase
     apply rtc.star.single,
     simp [bcomp],
     rw [bval],
@@ -1236,7 +1236,7 @@ begin
       {simp, sorry} --TODO: TD1: this is an edgecase because list.nil (or NOP) does not increase pc and such list.length [] cannot be > 0.
     }
   },
-  case Not : b{
+  case Not : b{ --DONE
     specialize b_ih h_nneg,
     apply ¬ f,
     -- apply rtc.star.single,
@@ -1261,7 +1261,7 @@ begin
       exact b_ih,
     }
   },
-  case And : b1 b2 ih1 ih2{
+  case And : b1 b2 ih1 ih2{ --INCOMPLETE: 
     specialize ih1 h_nneg,
     apply f,
     specialize ih2 h_nneg,
@@ -1750,7 +1750,7 @@ induction c generalizing stk,
     },
     simp,
   },
-  case While : cond c ch{  --INCOMPLETE: bcomp reduce and h_step dependancy on bcond and 1 = neg num
+  case While : cond c ch{  --INCOMPLETE: bcomp reduce and h_step dependancy on bcond and jmp i calculation
     simp [ccomp],
     -- ↑(list.length (bcomp cond false (↑(list.length (ccomp c)) + 1))) + (↑(list.length (ccomp c)) + 1)
     apply exec_append_trans,
@@ -1787,14 +1787,12 @@ induction c generalizing stk,
           simp,
           have h_jmp : exec (
           [JMP (-1 + (-↑(list.length (ccomp c)) + -↑(list.length (bcomp cond false (↑(list.length (ccomp c)) + 1)))))])
-          (0, t, stk) ( 1, t, stk) :=
+          (0, t, stk) ( -↑(list.length (ccomp c)) + -↑(list.length (bcomp cond false (↑(list.length (ccomp c)) + 1))) , t, stk) :=
           begin
             apply rtc.star.single,
             apply exec1I,
             {
               simp [nth, iexec],
-              -- prove  1 = -↑(list.length (ccomp c)) + -↑(list.length (bcomp cond false (↑(list.length (ccomp c)) + 1)))
-              sorry,
             },
             simp,
             simp,
@@ -1802,10 +1800,11 @@ induction c generalizing stk,
           exact h_jmp,
         },
         simp,
+        sorry,
       end,
       exact h_body,
     },
-    sorry,
+    simp,
   },
 end
 
