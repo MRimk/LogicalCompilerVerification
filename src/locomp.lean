@@ -960,7 +960,7 @@ lemma acomp_correct {a : aexp}  {s : state}  {stk : stack} :
 exec (acomp a) (0, s, stk) (list.length (acomp a), s, (eval a s) :: stk) :=
 begin
   induction a generalizing stk,
-  case num {
+  case num {  --DONE
     simp [acomp, eval],
     apply rtc.star.single,
     apply exec1I,
@@ -975,7 +975,7 @@ begin
       simp,
     }
   },
-  case var {
+  case var {  --DONE
     simp [acomp, eval],
     apply rtc.star.single,
     apply exec1I,
@@ -990,118 +990,149 @@ begin
       simp,
     }
   },
-  case add : a b a_i b_i{
+  case add : a b a_i b_i{ --DONE
     simp [acomp],
-    --trans a ++ (b ++ [ADD])
+    --trans a ++ (b ++ [OP])
     apply exec_append_trans,
-    apply int.of_nat(↑(list.length (acomp b)) + 1),
+    apply int.of_nat(list.length (acomp a)),
     exact a_i,
     simp,
     {
-      simp,
-      --trans b ++ [ADD]
-      apply exec_append_trans,
-      apply int.of_nat(1),
-      exact b_i,
-      simp,
-      {   -- TODO: TD2: how to specify ?m_1? We know that it should be 1, but there is no place to specify it
+      have h_b_add : exec (acomp b ++ [ADD]) (↑(list.length (acomp a)) - ↑(list.length (acomp a)), s, eval a s :: stk) (list.length (acomp b) + 1, s, eval (add a b) s :: stk) := 
+      begin
         simp,
-        --exec1 [ADD]
-        apply rtc.star.single,
-        apply exec1I,
+        --trans b ++ [OP]
+        apply exec_append_trans,
+        apply int.of_nat(list.length (acomp b)),
+        exact b_i,
+        simp,
         {
-          simp [nth],
-          simp [iexec],
-          split,
-          sorry,
-          simp [eval],
+          simp,
+          have h_add: exec [ADD] (0, s, eval b s :: eval a s :: stk) (1, s, eval (add a b) s :: stk) := 
+          begin
+            apply rtc.star.single,
+            apply exec1I,
+            {
+              simp [nth, iexec, eval],
+            },
+            linarith,
+            simp,
+          end,
+          exact h_add,
         },
-        linarith,
+        refl,
+      end,
+      exact h_b_add,
+    },
+    refl,
+  },
+  case sub : a b a_i b_i{ --DONE
+    simp [acomp],
+    --trans a ++ (b ++ [OP])
+    apply exec_append_trans,
+    apply int.of_nat(list.length (acomp a)),
+    exact a_i,
+    simp,
+    {
+      have h_b_add : exec (acomp b ++ [SUB]) (↑(list.length (acomp a)) - ↑(list.length (acomp a)), s, eval a s :: stk) (list.length (acomp b) + 1, s, eval (sub a b) s :: stk) := 
+      begin
         simp,
-      },
-      -- TODO: TD2: how to specify ?m_1 and ?m_2? We know that ?m_1 should be ↑(list.length (acomp b)) + ?m_2 and ?m_2 should be 1, but there is no place to specify it
-      {sorry},
-      apply int.of_nat(list.length (acomp a)),
-
+        --trans b ++ [OP]
+        apply exec_append_trans,
+        apply int.of_nat(list.length (acomp b)),
+        exact b_i,
+        simp,
+        {
+          simp,
+          have h_add: exec [SUB] (0, s, eval b s :: eval a s :: stk) (1, s, eval (sub a b) s :: stk) := 
+          begin
+            apply rtc.star.single,
+            apply exec1I,
+            {
+              simp [nth, iexec, eval],
+            },
+            linarith,
+            simp,
+          end,
+          exact h_add,
+        },
+        refl,
+      end,
+      exact h_b_add,
     },
-    -- TODO: TD2: how to specify ?m_1 and ?m_2? We know that ?m_1 should be ↑(list.length (acomp b)) + 1, but there is no place to specify it
-    {sorry},
-    apply int.of_nat (list.length (acomp b) + 1),
+    refl,
   },
-  case sub : a b a_i b_i{
+  case mul : a b a_i b_i{ --DONE
     simp [acomp],
-    apply rtc.star.single,
-    apply exec1I,
+    --trans a ++ (b ++ [OP])
+    apply exec_append_trans,
+    apply int.of_nat(list.length (acomp a)),
+    exact a_i,
+    simp,
     {
-      simp [eval],
-      simp [nth_append],
-      by_cases h_pos : (0 < list.length (acomp a)),
-      {
-        simp [h_pos],
-        sorry,
-      },
-      {
-        simp [h_pos],
-        sorry,
-      },
+      have h_b_add : exec (acomp b ++ [MUL]) (↑(list.length (acomp a)) - ↑(list.length (acomp a)), s, eval a s :: stk) (list.length (acomp b) + 1, s, eval (mul a b) s :: stk) := 
+      begin
+        simp,
+        --trans b ++ [OP]
+        apply exec_append_trans,
+        apply int.of_nat(list.length (acomp b)),
+        exact b_i,
+        simp,
+        {
+          simp,
+          have h_add: exec [MUL] (0, s, eval b s :: eval a s :: stk) (1, s, eval (mul a b) s :: stk) := 
+          begin
+            apply rtc.star.single,
+            apply exec1I,
+            {
+              simp [nth, iexec, eval],
+            },
+            linarith,
+            simp,
+          end,
+          exact h_add,
+        },
+        refl,
+      end,
+      exact h_b_add,
     },
-    {
-      linarith,
-    },
-    {
-      simp,
-      linarith,
-    }
+    refl,
   },
-  case mul : a b a_i b_i{
+  case div : a b a_i b_i{ --DONE
     simp [acomp],
-    apply rtc.star.single,
-    apply exec1I,
+    --trans a ++ (b ++ [OP])
+    apply exec_append_trans,
+    apply int.of_nat(list.length (acomp a)),
+    exact a_i,
+    simp,
     {
-      simp [eval],
-      simp [nth_append],
-      by_cases h_pos : (0 < list.length (acomp a)),
-      {
-        simp [h_pos],
-        sorry,
-      },
-      {
-        simp [h_pos],
-        sorry,
-      },
+      have h_b_add : exec (acomp b ++ [DIV]) (↑(list.length (acomp a)) - ↑(list.length (acomp a)), s, eval a s :: stk) (list.length (acomp b) + 1, s, eval (div a b) s :: stk) := 
+      begin
+        simp,
+        --trans b ++ [OP]
+        apply exec_append_trans,
+        apply int.of_nat(list.length (acomp b)),
+        exact b_i,
+        simp,
+        {
+          simp,
+          have h_add: exec [DIV] (0, s, eval b s :: eval a s :: stk) (1, s, eval (div a b) s :: stk) := 
+          begin
+            apply rtc.star.single,
+            apply exec1I,
+            {
+              simp [nth, iexec, eval],
+            },
+            linarith,
+            simp,
+          end,
+          exact h_add,
+        },
+        refl,
+      end,
+      exact h_b_add,
     },
-    {
-      linarith,
-    },
-    {
-      simp,
-      linarith,
-    }
-  },
-  case div : a b a_i b_i{
-    simp [acomp],
-    apply rtc.star.single,
-    apply exec1I,
-    {
-      simp [eval],
-      simp [nth_append],
-      by_cases h_pos : (0 < list.length (acomp a)),
-      {
-        simp [h_pos],
-        sorry,
-      },
-      {
-        simp [h_pos],
-        sorry,
-      },
-    },
-    {
-      linarith,
-    },
-    {
-      simp,
-      linarith,
-    }
+    refl,
   
   },
 
@@ -1138,7 +1169,7 @@ def bval : bexp → state → Prop
 | (And b1 b2) s := bval b1 s ∧ bval b2 s
 | (Less a1 a2) s := (eval a1 s) < (eval a2 s) 
 
-noncomputable def bcomp : bexp → Prop → ℤ → list instr  --TODO: find out whether noncomputable is okay
+noncomputable def bcomp : bexp → Prop → ℤ → list instr  --TODO: TD6: find out whether noncomputable is okay
 | (Bc v) f n := if (v = f) then [JMP n] else []
 | (Not b) f n :=  bcomp b (¬ f) n
 | (And b1 b2) f n := 
@@ -1258,8 +1289,7 @@ begin
 
     }
   },
-  case Less : a1 a2{
-    -- apply rtc.star.single,
+  case Less : a1 a2{  --DONE
     simp [bcomp],
     rw [bval],
     -- acomp a1 ++ (acomp a2 ++ ite (f = true) [JMPLESS n] [JMPGE n])
@@ -1269,47 +1299,61 @@ begin
     simp,
     {
       simp,
-      -- (acomp a2 ++ ite (f = true) [JMPLESS n] [JMPGE n])
-      apply exec_append_trans,
-      apply int.of_nat (list.length (acomp a2)),
-      apply acomp_correct,
-      simp,
-      {
+      have h_a2_ite : exec (acomp a2 ++ ite (f = true) [JMPLESS n] [JMPGE n]) (0, s, eval a1 s :: stk) ((↑(list.length (acomp a2)) + ↑(list.length (ite (f = true) [JMPLESS n] [JMPGE n]))) +
+        ite (f = (eval a1 s < eval a2 s)) n 0, s, stk) := 
+      begin
+        -- (acomp a2 ++ ite (f = true) [JMPLESS n] [JMPGE n])
+        apply exec_append_trans,
+        apply int.of_nat (list.length (acomp a2)),
+        apply acomp_correct,
         simp,
-        by_cases h_f : (f = true),
-        { -- [JMPLESS]
-          simp [h_f],
-          apply rtc.star.single,
-          apply exec1I,
-          {
-            simp [nth],
-            simp [iexec],
-            --TODO: TD2: carry in the correct resulting config i and solve from there
-            sorry,
-          },
-          linarith,
+        {
           simp,
+          have h_ite : exec (ite (f = true) [JMPLESS n] [JMPGE n]) (0, s, eval a2 s :: eval a1 s :: stk) (↑(list.length (ite (f = true) [JMPLESS n] [JMPGE n])) + ite (f = (eval a1 s < eval a2 s)) n 0, s, stk) := 
+          begin
+            by_cases h_f : (f = true),
+            { -- [JMPLESS]
+              simp [h_f],
+              apply rtc.star.single,
+              apply exec1I,
+              {
+                simp [nth],
+                simp [iexec],
+                by_cases h_ite : (eval a1 s < eval a2 s),
+                {simp [h_ite],},
+                {simp [h_ite],}
+              },
+              simp,
+              simp,
+            },
+            { -- [JMPGE]
+              simp [h_f],
+              apply rtc.star.single,
+              apply exec1I,
+              {
+                simp [nth],
+                simp [iexec],
+                have h_f_false : f = ¬ true :=
+                begin
+                  apply not_not_eq,
+                  exact h_f,
+                end,
+                simp [h_f_false],
+                by_cases h_ite : (eval a2 s ≤ eval a1 s),
+                {simp [h_ite],},
+                {simp [h_ite],}
+              },
+              simp,
+              simp,
+            },
+          end,
+          exact h_ite,
         },
-        { -- [JMPGE]
-          simp [h_f],
-          apply rtc.star.single,
-          apply exec1I,
-          {
-            simp [nth],
-            simp [iexec],
-            --TODO: TD2: carry in the correct resulting config i and solve from there
-            sorry,
-          },
-          linarith,
-          simp,
-        },
-      },
-      sorry, -- TODO: TD2: ?m_1 & ?m_2 !!!!
-      apply ↑(list.length (ite (f = true) [JMPLESS n] [JMPGE n])) + ite (f = (eval a1 s < eval a2 s)) n 0,
+        finish,
+      end,
+      exact h_a2_ite,
     },
-    sorry, -- TODO: TD2: ?m_1 !!!!
-    apply (↑(list.length (acomp a2)) + ↑(list.length (ite (f = true) [JMPLESS n] [JMPGE n]))) +
-  ite (f = (eval a1 s < eval a2 s)) n 0,
+    finish,
   }
 
 end
@@ -1367,47 +1411,6 @@ infixr ` ;; ` : 90 := Seq
 def silly_loop {s : state} : com :=
 While ( Bc ( s "x" > s "y") )
   (SKIP ;; Assign "x" (num ((s "x") - 1)))
-
-/-
-
-subsection "Preservation of semantics"
-
-lemma ccomp_bigstep:
-  "(c,s) ⇒ t ⟹ ccomp c ⊢ (0,s,stk) →* (size(ccomp c),t,stk)"
-proof(induction arbitrary: stk rule: big_step_induct)
-  case (Assign x a s)
-  show ?case by (fastforce simp:fun_upd_def cong: if_cong)
-next
-  case (Seq c1 s1 s2 c2 s3)
-  let ?cc1 = "ccomp c1"  let ?cc2 = "ccomp c2"
-  have "?cc1 @ ?cc2 ⊢ (0,s1,stk) →* (size ?cc1,s2,stk)"
-    using Seq.IH(1) by fastforce
-  moreover
-  have "?cc1 @ ?cc2 ⊢ (size ?cc1,s2,stk) →* (size(?cc1 @ ?cc2),s3,stk)"
-    using Seq.IH(2) by fastforce
-  ultimately show ?case by simp (blast intro: star_trans)
-next
-  case (WhileTrue b s1 c s2 s3)
-  let ?cc = "ccomp c"
-  let ?cb = "bcomp b False (size ?cc + 1)"
-  let ?cw = "ccomp(WHILE b DO c)"
-  have "?cw ⊢ (0,s1,stk) →* (size ?cb,s1,stk)"
-    using ‹bval b s1› by fastforce
-  moreover
-  have "?cw ⊢ (size ?cb,s1,stk) →* (size ?cb + size ?cc,s2,stk)"
-    using WhileTrue.IH(1) by fastforce
-  moreover
-  have "?cw ⊢ (size ?cb + size ?cc,s2,stk) →* (0,s2,stk)"
-    by fastforce
-  moreover
-  have "?cw ⊢ (0,s2,stk) →* (size ?cw,s3,stk)" by(rule WhileTrue.IH(2))
-  ultimately show ?case by(blast intro: star_trans)
-qed fastforce+
-
-end
--/
-
-
 
 
 inductive big_step : com × state → state → Prop
@@ -1606,12 +1609,52 @@ by rw big_step_while_iff; simp [hcond]
 
 
 
+/-
+
+subsection "Preservation of semantics"
+
+lemma ccomp_bigstep:
+  "(c,s) ⇒ t ⟹ ccomp c ⊢ (0,s,stk) →* (size(ccomp c),t,stk)"
+proof(induction arbitrary: stk rule: big_step_induct)
+  case (Assign x a s)
+  show ?case by (fastforce simp:fun_upd_def cong: if_cong)
+next
+  case (Seq c1 s1 s2 c2 s3)
+  let ?cc1 = "ccomp c1"  let ?cc2 = "ccomp c2"
+  have "?cc1 @ ?cc2 ⊢ (0,s1,stk) →* (size ?cc1,s2,stk)"
+    using Seq.IH(1) by fastforce
+  moreover
+  have "?cc1 @ ?cc2 ⊢ (size ?cc1,s2,stk) →* (size(?cc1 @ ?cc2),s3,stk)"
+    using Seq.IH(2) by fastforce
+  ultimately show ?case by simp (blast intro: star_trans)
+next
+  case (WhileTrue b s1 c s2 s3)
+  let ?cc = "ccomp c"
+  let ?cb = "bcomp b False (size ?cc + 1)"
+  let ?cw = "ccomp(WHILE b DO c)"
+  have "?cw ⊢ (0,s1,stk) →* (size ?cb,s1,stk)"
+    using ‹bval b s1› by fastforce
+  moreover
+  have "?cw ⊢ (size ?cb,s1,stk) →* (size ?cb + size ?cc,s2,stk)"
+    using WhileTrue.IH(1) by fastforce
+  moreover
+  have "?cw ⊢ (size ?cb + size ?cc,s2,stk) →* (0,s2,stk)"
+    by fastforce
+  moreover
+  have "?cw ⊢ (0,s2,stk) →* (size ?cw,s3,stk)" by(rule WhileTrue.IH(2))
+  ultimately show ?case by(blast intro: star_trans)
+qed fastforce+
+
+end
+-/
+
+
 lemma ccomp_bigstep {c : com} { s : state } {t : state } {stk : stack} 
 (h_step : (c, s) ⟹ t) :
 exec (ccomp c) (0, s, stk) (list.length (ccomp c), t, stk) :=
 begin
 induction c generalizing stk,
-  case SKIP {
+  case SKIP { --INCOMPLETE: list.nil problem
     apply rtc.star.single,
     simp [ccomp],
     apply exec1I,
@@ -1619,7 +1662,7 @@ induction c generalizing stk,
     {linarith,},
     {simp, sorry} --TODO: TD1: this is an edgecase because list.nil (or NOP) does not increase pc and such list.length [] cannot be > 0.
   },
-  case Assign : v a{
+  case Assign : v a{  --DONE
     simp [ccomp],
     apply exec_append_trans,
     apply int.of_nat (list.length (acomp a)),
@@ -1627,46 +1670,141 @@ induction c generalizing stk,
     simp,
     {
       simp,
-      apply rtc.star.single,
-      apply exec1I,
-      {
-        simp [nth],
-        simp [iexec],
-        split,
-        {sorry},-- TODO: TD2: how to specify ?m_1? We know that it should be 1, but there is no place to specify it
-        finish,
-      },
-      {simp,},
-      {simp,}
+      have h_store : exec [STORE v] (0, s, eval a s :: stk) (int.of_nat (list.length ([STORE])), t, stk) :=
+      begin
+        apply rtc.star.single,
+        apply exec1I,
+        {
+          simp [nth],
+          simp [iexec],
+          finish,
+        },
+        {simp,},
+        {simp,}
+      end,
+      exact h_store,
     },
-    sorry,
-    apply int.of_nat (list.length ([STORE])),
+    simp,
   },
-  case Seq : c1 c2 ch1 ch2 {
+  case Seq : c1 c2 ch1 ch2 {  -- INCOMPLETE: h_step problem
     simp [ccomp],
+    simp [big_step_seq_iff] at h_step,  
+    cases h_step with u u_steps,    --TODO: TD4: How to specify this step exactly to t?
     apply exec_append_trans,
-    apply int.of_nat (list.length (ccomp c1)),-- TODO: TD2: how to specify ?m_1?
+    apply int.of_nat (list.length (ccomp c1)),
     apply ch1,
     { -- prove (c1, s) ⟹ t
-      simp [big_step_seq_iff] at h_step,  --TODO: TD4: there should be an extra step in between c1 and c2 but don't know how to get it
       sorry,
     },
     simp,
     {
       simp,
-      -- apply ch2,  but t ≠ s 
-      sorry,
+      have h_ccomp2 : exec (ccomp c2) (0, t, stk) (↑(list.length (ccomp c2)), t, stk) :=
+      begin
+        -- set the c1 step up to t and this t to t 
+        sorry,
+      end,
+      exact h_ccomp2,
     },
-    sorry,
-    apply int.of_nat (list.length (ccomp c2)),
+    refl,
   },
-  case If : cond c1 c2 ch1 ch2 {
+  case If : cond c1 c2 ch1 ch2 {  --INCOMPLETE: stuck on h_step and exec_cons_1
     simp [ccomp],
-
-    sorry,
+    -- ↑(list.length (bcomp cond false (↑(list.length (ccomp c1)) + 1))) + (↑(list.length (ccomp c1)) + (↑(list.length (ccomp c2)) + 1))
+    apply exec_append_trans,
+    apply int.of_nat (list.length (bcomp cond false (↑(list.length (ccomp c1)) + 1))),
+    {
+      have h_bcomp : exec (bcomp cond false (↑(list.length (ccomp c1)) + 1)) (0, s, stk) (int.of_nat (list.length (bcomp cond false (↑(list.length (ccomp c1)) + 1))), s, stk) := 
+      begin sorry, end,
+      exact h_bcomp,
+    },
+    simp,
+    {
+      simp,
+      have h_ccomp_jmp : exec (ccomp c1 ++ JMP ↑(list.length (ccomp c2)) :: ccomp c2) (0, s, stk) ((↑(list.length (ccomp c1)) + (↑(list.length (ccomp c2)) + 1)), t, stk) :=
+      begin 
+        apply exec_append_trans,
+        apply int.of_nat (list.length (ccomp c1)),
+        {
+          have h_ccomp1 : exec (ccomp c1) (0, s, stk) (↑(list.length (ccomp c1)), t, stk) :=
+          begin
+            apply ch1,
+            simp at h_step,
+            --TODO: extract (c1, s) ⟹ t from h_step
+            sorry,
+          end,
+          exact h_ccomp1,
+        },
+        simp,
+        {
+          simp,
+          have h_jmp : exec (JMP ↑(list.length (ccomp c2)) :: ccomp c2) (0, t, stk) ((↑(list.length (ccomp c2)) + 1), t, stk) :=
+          begin
+            sorry, -- exec_cons_1 but it does not work due to being from 1 not from 0
+          end,
+          exact h_jmp,
+        },
+        simp,
+      end,
+      exact h_ccomp_jmp,
+    },
+    simp,
   },
-  case While : cond c ch{
+  case While : cond c ch{  --INCOMPLETE: bcomp reduce and h_step dependancy on bcond and 1 = neg num
     simp [ccomp],
+    -- ↑(list.length (bcomp cond false (↑(list.length (ccomp c)) + 1))) + (↑(list.length (ccomp c)) + 1)
+    apply exec_append_trans,
+    apply int.of_nat (list.length (bcomp cond false (↑(list.length (ccomp c)) + 1))),
+    {
+      have h_cond : exec (bcomp cond false (↑(list.length (ccomp c)) + 1)) (0, s, stk) (↑(list.length (bcomp cond false (↑(list.length (ccomp c)) + 1))), s, stk) :=
+      begin
+        apply rtc.star.single,
+        --reduce bcomp here
+        sorry,
+      end,
+      exact h_cond,
+    },
+    simp,
+    {
+      simp,
+      have h_body : exec (ccomp c ++ 
+          [JMP (-1 + (-↑(list.length (ccomp c)) + -↑(list.length (bcomp cond false (↑(list.length (ccomp c)) + 1)))))])
+          (0, s, stk) ((↑(list.length (ccomp c)) + 1), t, stk) :=
+      begin
+        apply exec_append_trans,
+        apply int.of_nat (list.length (ccomp c)),
+        {
+          have h_ccomp : exec (ccomp c) (0, s, stk) (↑(list.length (ccomp c)), t, stk) :=
+          begin
+            apply ch,
+            --extract (c, s) ⟹ t from h_step using bcond true/false dependency
+            sorry,
+          end,
+          exact h_ccomp,
+        },
+        simp,
+        {
+          simp,
+          have h_jmp : exec (
+          [JMP (-1 + (-↑(list.length (ccomp c)) + -↑(list.length (bcomp cond false (↑(list.length (ccomp c)) + 1)))))])
+          (0, t, stk) ( 1, t, stk) :=
+          begin
+            apply rtc.star.single,
+            apply exec1I,
+            {
+              simp [nth, iexec],
+              -- prove  1 = -↑(list.length (ccomp c)) + -↑(list.length (bcomp cond false (↑(list.length (ccomp c)) + 1)))
+              sorry,
+            },
+            simp,
+            simp,
+          end,
+          exact h_jmp,
+        },
+        simp,
+      end,
+      exact h_body,
+    },
     sorry,
   },
 end
@@ -1678,10 +1816,9 @@ QUESTIONS:
 TD1 : How to solve an edgecase for NOP?: 
       0 < ↑(list.length list.nil) - this is an edgecase because list.nil (or NOP) does not increase pc and such list.length [] cannot be > 0.
       (bcomp Bc and ccomp SKIP)  
-TD2 : How to pass a correct i to ?m_1 in exec_append_trans lemma? 
-      (acomp add, sub, mul, div;  bcomp and, less;  ccomp Assign, Seq, If, While;)
 TD3 : bcomp and - how to get a correct exec?
-TD4 : how to get the steps correctly in ccomp Seq? and how do they work?
+TD4 : How to specify this step exactly to t?
 TD5 : silly loop notation clarification? - not important
+TD6: noncomputable - is it correct? - not important
 -/
 end LoComp
