@@ -219,13 +219,13 @@ def iexec : instr → config → config
 | (STORE v) (i, s, stk) := (i + 1, s{v ↦ (stk.head)}, stk.tail)
 | (JMP n) (i, s, stk) := (i + 1 + n, s, stk)
 | (JMPLESS n) (i, s, stk) := 
-  if (head2 stk) < (stk.head)
-  then (i + 1 + n, s, tail2 stk)
-  else (i + 1, s, tail2 stk)
+  if (stk.tail.head) < (stk.head)
+  then (i + 1 + n, s, stk.tail.tail)
+  else (i + 1, s, stk.tail.tail)
 | (JMPGE n) (i, s, stk) := 
-  if (head2 stk) ≥ (stk.head)
-  then (i + 1 + n, s, tail2 stk)
-  else (i + 1, s, tail2 stk)
+  if (stk.tail.head) ≥ (stk.head)
+  then (i + 1 + n, s, stk.tail.tail)
+  else (i + 1, s, stk.tail.tail)
 | NOP (i, s, stk) := (i, s, stk)
 
 /- redefinition for ints rather than nat -/ 
@@ -1004,7 +1004,7 @@ begin
       apply int.of_nat(1),
       exact b_i,
       simp,
-      {   -- TODO: how to specify ?m_1? We know that it should be 1, but there is no place to specify it
+      {   -- TODO: TD2: how to specify ?m_1? We know that it should be 1, but there is no place to specify it
         simp,
         --exec1 [ADD]
         apply rtc.star.single,
@@ -1019,12 +1019,12 @@ begin
         linarith,
         simp,
       },
-      -- TODO: how to specify ?m_1 and ?m_2? We know that ?m_1 should be ↑(list.length (acomp b)) + ?m_2 and ?m_2 should be 1, but there is no place to specify it
+      -- TODO: TD2: how to specify ?m_1 and ?m_2? We know that ?m_1 should be ↑(list.length (acomp b)) + ?m_2 and ?m_2 should be 1, but there is no place to specify it
       {sorry},
       apply int.of_nat(list.length (acomp a)),
 
     },
-    -- TODO: how to specify ?m_1 and ?m_2? We know that ?m_1 should be ↑(list.length (acomp b)) + 1, but there is no place to specify it
+    -- TODO: TD2: how to specify ?m_1 and ?m_2? We know that ?m_1 should be ↑(list.length (acomp b)) + 1, but there is no place to specify it
     {sorry},
     apply int.of_nat (list.length (acomp b) + 1),
   },
@@ -1202,7 +1202,7 @@ begin
       apply exec1I,
       {simp [nth], simp [iexec],},
       {linarith,},
-      {simp, sorry} --TODO: prove false ?????
+      {simp, sorry} --TODO: TD1: this is an edgecase because list.nil (or NOP) does not increase pc and such list.length [] cannot be > 0.
     }
   },
   case Not : b{
@@ -1211,7 +1211,6 @@ begin
     -- apply rtc.star.single,
     simp [bcomp],
     rw [bval],
-    --TODO: could i just do this : (¬f) = bval b s == f = ¬bval b s
     by_cases h_bisf : (f = bval b s),
     {
       simp [h_bisf],
@@ -1246,7 +1245,7 @@ begin
 
       -- apply exec_append_trans,
       -- apply int.of_nat (list.length (bcomp b1 false ↑(list.length (bcomp b2 true n)))),
-      sorry, -- TODO: have an exec not like ih but (bcomp b1 false (↑(list.length (bcomp b2 false n)) + n))
+      sorry, -- TODO: TD3: have an exec not like ih but (bcomp b1 false (↑(list.length (bcomp b2 false n)) + n))
     },
     {
       simp at *,
@@ -1255,7 +1254,7 @@ begin
 
       -- apply exec_append_trans,
       -- apply ↑(list.length (bcomp b1 false n)) + ite (f = bval b1 s) n 0,
-      sorry, -- TODO: have an exec not like ih but (bcomp b1 false (↑(list.length (bcomp b2 false n)) + n))
+      sorry, -- TODO: TD3: have an exec not like ih but (bcomp b1 false (↑(list.length (bcomp b2 false n)) + n))
 
     }
   },
@@ -1285,7 +1284,7 @@ begin
           {
             simp [nth],
             simp [iexec],
-            --TODO: carry in the correct resulting config i and solve from there
+            --TODO: TD2: carry in the correct resulting config i and solve from there
             sorry,
           },
           linarith,
@@ -1298,17 +1297,17 @@ begin
           {
             simp [nth],
             simp [iexec],
-            --TODO: carry in the correct resulting config i and solve from there
+            --TODO: TD2: carry in the correct resulting config i and solve from there
             sorry,
           },
           linarith,
           simp,
         },
       },
-      sorry, -- TODO: ?m_1 & ?m_2 !!!!
+      sorry, -- TODO: TD2: ?m_1 & ?m_2 !!!!
       apply ↑(list.length (ite (f = true) [JMPLESS n] [JMPGE n])) + ite (f = (eval a1 s < eval a2 s)) n 0,
     },
-    sorry, -- TODO: ?m_1 !!!!
+    sorry, -- TODO: TD2: ?m_1 !!!!
     apply (↑(list.length (acomp a2)) + ↑(list.length (ite (f = true) [JMPLESS n] [JMPGE n]))) +
   ite (f = (eval a1 s < eval a2 s)) n 0,
   }
@@ -1361,8 +1360,13 @@ noncomputable def ccomp : com → list instr
     cb := bcomp b false (list.length cc + 1)
   in cb ++ cc ++ [JMP (-(list.length cb + list.length cc + 1))] 
 )
+open com
 
+infixr ` ;; ` : 90 := Seq
 
+def silly_loop {s : state} : com :=
+While ( Bc ( s "x" > s "y") )
+  (SKIP ;; Assign "x" (num ((s "x") - 1)))
 
 /-
 
@@ -1403,14 +1407,281 @@ qed fastforce+
 end
 -/
 
--- lemma ccomp_bigstep {c : com} { s : state } {t : state } {stk : stack} -- TODO: how to write this (c,s) ?
--- (h1 : (c, s))
--- (h2 : t) :
--- exec (ccomp c) (0, s, stk) (list.length (ccomp c), t, stk) :=
+
+
+
+inductive big_step : com × state → state → Prop
+| skip {s} :
+  big_step (SKIP, s) s
+| assign {x a s} :
+  big_step (Assign x a, s) (s{x ↦ eval a s})
+| seq {S T s t u} (hS : big_step (S, s) t)
+    (hT : big_step (T, t) u) :
+  big_step (S ;; T, s) u
+| ite_true {b : bexp} {S T s t} (hcond : bval b s)
+    (hbody : big_step (S, s) t) :
+  big_step (com.If b S T, s) t
+| ite_false {b : bexp} {S T s t} (hcond : ¬bval b s)
+    (hbody : big_step (T, s) t) :
+  big_step (com.If b S T, s) t
+| while_true {b : bexp} {S s t u} (hcond : bval b s)
+    (hbody : big_step (S, s) t)
+    (hrest : big_step (While b S, t) u) :
+  big_step (While b S, s) u
+| while_false {b : bexp} {S s} (hcond : ¬ bval b s) :
+  big_step (While b S, s) s
+
+infix ` ⟹ ` : 110 := big_step
+
+
+-- lemma silly_loop_from_1_big_step : --TODO: TD5: silly_loop notation clarification
+--   (silly_loop ({"x" ↦ 1}) {"x" ↦ 1}) ⟹ (λ_, 0) :=
 -- begin
---   -- induction c generalizing stk,
---   sorry,
+--   rw silly_loop,
+--   apply big_step.while_true,
+--   { simp },
+--   { apply big_step.seq,
+--     { apply big_step.skip },
+--     { apply big_step.assign } },
+--   { simp,
+--     apply big_step.while_false,
+--     linarith }
 -- end
 
 
+/-! ## Properties of the Big-Step Semantics
+
+Equipped with a big-step semantics, we can
+
+* prove properties of the programming language, such as **equivalence proofs**
+  between programs and **determinism**;
+
+* reason about **concrete programs**, proving theorems relating final states `t`
+  with initial states `s`. -/
+
+lemma big_step_deterministic {S s l r} (hl : (S, s) ⟹ l)
+    (hr : (S, s) ⟹ r) :
+  l = r :=
+begin
+  induction' hl,
+  case skip {
+    cases' hr,
+    refl },
+  case assign {
+    cases' hr,
+    refl },
+  case seq : S T s t l hS hT ihS ihT {
+    cases' hr with _ _ _ _ _ _ _ t' _ hS' hT',
+    cases' ihS hS',
+    cases' ihT hT',
+    refl },
+  case ite_true : b S T s t hb hS ih {
+    cases' hr,
+    { apply ih hr },
+    { cc } },
+  case ite_false : b S T s t hb hT ih {
+    cases' hr,
+    { cc },
+    { apply ih hr } },
+  case while_true : b S s t u hb hS hw ihS ihw {
+    cases' hr,
+    { cases' ihS hr,
+      cases' ihw hr_1,
+      refl },
+    { cc } },
+  { cases' hr,
+    { cc },
+    { refl } }
+end
+
+lemma big_step_terminates {S s} :
+  ∃t, (S, s) ⟹ t :=
+sorry   -- unprovable
+
+lemma big_step_doesnt_terminate {S s t} :
+  ¬ (While (Bc ( true)) S, s) ⟹ t :=
+begin
+  intro hw,
+  induction' hw,
+  case while_true {
+    assumption },
+  case while_false {
+    simp [bval] at hcond,
+    cc }
+end
+
+/-! We can define inversion rules about the big-step semantics: -/
+
+@[simp] lemma big_step_skip_iff {s t} :
+  (SKIP, s) ⟹ t ↔ t = s :=
+begin
+  apply iff.intro,
+  { intro h,
+    cases' h,
+    refl },
+  { intro h,
+    rw h,
+    exact big_step.skip }
+end
+
+@[simp] lemma big_step_assign_iff {x a s t} :
+  (Assign x a, s) ⟹ t ↔ t = s{x ↦ eval a s} :=
+begin
+  apply iff.intro,
+  { intro h,
+    cases' h,
+    refl },
+  { intro h,
+    rw h,
+    exact big_step.assign }
+end
+
+@[simp] lemma big_step_seq_iff {S T s t} :
+  (S ;; T, s) ⟹ t ↔ (∃u, (S, s) ⟹ u ∧ (T, u) ⟹ t) :=
+begin
+  apply iff.intro,
+  { intro h,
+    cases' h,
+    apply exists.intro,
+    apply and.intro; assumption },
+  { intro h,
+    cases' h,
+    cases' h,
+    apply big_step.seq; assumption }
+end
+
+@[simp] lemma big_step_ite_iff {b S T s t} :
+  (com.If b S T, s) ⟹ t ↔
+  (bval b s ∧ (S, s) ⟹ t) ∨ (¬ bval b s ∧ (T, s) ⟹ t) :=
+begin
+  apply iff.intro,
+  { intro h,
+    cases' h,
+    { apply or.intro_left,
+      cc },
+    { apply or.intro_right,
+      cc } },
+  { intro h,
+    cases' h; cases' h,
+    { apply big_step.ite_true; assumption },
+    { apply big_step.ite_false; assumption } }
+end
+
+lemma big_step_while_iff {b S s u} :
+  (While b S, s) ⟹ u ↔
+  (∃t, bval b s ∧ (S, s) ⟹ t ∧ (While b S, t) ⟹ u)
+  ∨ (¬ bval b s ∧ u = s) :=
+begin
+  apply iff.intro,
+  { intro h,
+    cases' h,
+    { apply or.intro_left,
+      apply exists.intro t,
+      cc },
+    { apply or.intro_right,
+      cc } },
+  { intro h,
+    cases' h,
+    case inl {
+      cases' h with t h,
+      cases' h with hb h,
+      cases' h with hS hwhile,
+      exact big_step.while_true hb hS hwhile },
+    case inr {
+      cases' h with hb hus,
+      rw hus,
+      exact big_step.while_false hb } }
+end
+
+lemma big_step_while_true_iff {b : bexp} {S s u}
+    (hcond : bval b s) :
+  (While b S, s) ⟹ u ↔
+  (∃t, (S, s) ⟹ t ∧ (While b S, t) ⟹ u) :=
+by rw big_step_while_iff; simp [hcond]
+
+@[simp] lemma big_step_while_false_iff {b : bexp}
+    {S s t} (hcond : ¬ bval b s) :
+  (While b S, s) ⟹ t ↔ t = s :=
+by rw big_step_while_iff; simp [hcond]
+
+
+
+lemma ccomp_bigstep {c : com} { s : state } {t : state } {stk : stack} 
+(h_step : (c, s) ⟹ t) :
+exec (ccomp c) (0, s, stk) (list.length (ccomp c), t, stk) :=
+begin
+induction c generalizing stk,
+  case SKIP {
+    apply rtc.star.single,
+    simp [ccomp],
+    apply exec1I,
+    {simp [nth], simp [iexec], finish,},
+    {linarith,},
+    {simp, sorry} --TODO: TD1: this is an edgecase because list.nil (or NOP) does not increase pc and such list.length [] cannot be > 0.
+  },
+  case Assign : v a{
+    simp [ccomp],
+    apply exec_append_trans,
+    apply int.of_nat (list.length (acomp a)),
+    apply acomp_correct,
+    simp,
+    {
+      simp,
+      apply rtc.star.single,
+      apply exec1I,
+      {
+        simp [nth],
+        simp [iexec],
+        split,
+        {sorry},-- TODO: TD2: how to specify ?m_1? We know that it should be 1, but there is no place to specify it
+        finish,
+      },
+      {simp,},
+      {simp,}
+    },
+    sorry,
+    apply int.of_nat (list.length ([STORE])),
+  },
+  case Seq : c1 c2 ch1 ch2 {
+    simp [ccomp],
+    apply exec_append_trans,
+    apply int.of_nat (list.length (ccomp c1)),-- TODO: TD2: how to specify ?m_1?
+    apply ch1,
+    { -- prove (c1, s) ⟹ t
+      simp [big_step_seq_iff] at h_step,  --TODO: TD4: there should be an extra step in between c1 and c2 but don't know how to get it
+      sorry,
+    },
+    simp,
+    {
+      simp,
+      -- apply ch2,  but t ≠ s 
+      sorry,
+    },
+    sorry,
+    apply int.of_nat (list.length (ccomp c2)),
+  },
+  case If : cond c1 c2 ch1 ch2 {
+    simp [ccomp],
+
+    sorry,
+  },
+  case While : cond c ch{
+    simp [ccomp],
+    sorry,
+  },
+end
+
+
+
+/-
+QUESTIONS:
+TD1 : How to solve an edgecase for NOP?: 
+      0 < ↑(list.length list.nil) - this is an edgecase because list.nil (or NOP) does not increase pc and such list.length [] cannot be > 0.
+      (bcomp Bc and ccomp SKIP)  
+TD2 : How to pass a correct i to ?m_1 in exec_append_trans lemma? 
+      (acomp add, sub, mul, div;  bcomp and, less;  ccomp Assign, Seq, If, While;)
+TD3 : bcomp and - how to get a correct exec?
+TD4 : how to get the steps correctly in ccomp Seq? and how do they work?
+TD5 : silly loop notation clarification? - not important
+-/
 end LoComp
