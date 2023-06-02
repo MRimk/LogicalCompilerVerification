@@ -1073,7 +1073,7 @@ noncomputable def bcomp : bexp → Prop → ℤ → list instr  --TODO: TD6: fin
 | (And b1 b2) f n := 
     let cb2 := bcomp b2 f n,
       m := if (f = true) then int.of_nat (list.length cb2) else int.of_nat (list.length cb2) + n,
-      cb1 := bcomp b1 ff m
+      cb1 := bcomp b1 false m
     in cb1 ++ cb2
 | (Less a1 a2) f n := acomp a1 ++ acomp a2 ++ 
   (if (f = true) then [JMPLESS n] else [JMPGE n])
@@ -1107,7 +1107,7 @@ begin
   exact h_not_eq,
 end
 
-lemma bcomp_Bc_correct {n :ℤ} {b f s stk} --TODO: fix list.nil edgecase
+lemma bcomp_Bc_correct (n :ℤ) (b f s stk) --TODO: fix list.nil edgecase
 (h_nneg : 0 ≤ n) :
 exec (bcomp (Bc b) f n) (0, s, stk) (↑(list.length (bcomp (Bc b) f n)) + ite (f = bval (Bc b) s) n 0, s, stk) :=
 begin 
@@ -1133,7 +1133,7 @@ begin
     }
 end
 
-lemma bcomp_correct {n: ℤ} { b f s stk}
+lemma bcomp_correct (n: ℤ) ( b f s stk)
 (h_nneg : 0 ≤  n) :
 exec (bcomp b f n) (0, s, stk) (list.length (bcomp b f n) + (if (f = bval b s) then n else 0), s, stk) :=
 begin
@@ -1143,8 +1143,7 @@ begin
     apply h_nneg,
   },
   case Not : b{ --DONE
-    specialize b_ih h_nneg,
-    apply ¬ f,
+    specialize b_ih (¬f) n,
     -- apply rtc.star.single,
     simp [bcomp],
     rw [bval],
@@ -1168,222 +1167,34 @@ begin
     }
   },
   case And : b1 b2 ih1 ih2{ --INCOMPLETE: structure of the proof? 
-    -- specialize ih1 h_nneg,
-    -- apply f,
-    -- specialize ih2 h_nneg,
-    -- apply f,
+    specialize ih1 false (↑(list.length (bcomp b2 f n)) + ite (f = bval b2 s) n 0),
+    have h_b2_len_nneg : 0 ≤ (↑(list.length (bcomp b2 f n)) + ite (f = bval b2 s) n 0) :=
+    begin
+      have h_b2_len : 0 ≤ ↑(list.length (bcomp b2 f n)) := by simp [list.length_nneg],
+      have h_ite_leng : 0 ≤  ite (f = bval b2 s) n 0 := begin
+        by_cases h_ite : (f = bval b2 s),
+        {
+          simp [h_ite],
+          apply h_nneg,
+        },
+        {simp [h_ite],}
+      end,
+      linarith,
+    end,
+    simp [h_b2_len_nneg] at ih1,
+    specialize ih2 f n,
+    simp [h_nneg] at ih2,
+
     simp [bcomp],
-    rw [bval],
-    by_cases h_b1 : (bval b1 s),
+    by_cases h_f : (f = true),
     {
-      by_cases h_b2 : (bval b2 s),
-      { -- bval b1 s ∧ bval b2 s
-        
-        sorry,
-      },
-      {-- bval b1 s ∧ ¬ bval b2 s
-        sorry,
-      }
+      simp [h_f],
+      sorry,
     },
     {
-      by_cases h_b2 : (bval b2 s),
-      {-- ¬ bval b1 s ∧ bval b2 s
-        sorry,
-      },
-      {-- ¬ bval b1 s ∧ ¬ bval b2 s
-        sorry,
-      }
+      simp [h_f],
+      sorry,
     }
-    -- by_cases h_ite : (f = bval b1 s ∧ bval b2 s),
-    -- {
-    --   by_cases h_b2 : (bval b2 s),
-    --   {
-    --     have h_b1_f : f = bval b1 s :=
-    --     begin
-    --       simp [h_b2] at h_ite,
-    --       simp,
-    --       apply h_ite,
-    --     end,
-    --     by_cases hf : (f = true),
-    --     {sorry,},
-    --     sorry,
-    --   },
-    --   {
-    --     have hf : f = false :=
-    --     begin
-    --       simp [h_b2] at h_ite,
-    --       apply false.elim,
-    --       apply h_ite,
-    --     end,
-    --     simp [hf, h_ite],
-    --     have hf_t : ¬ f = true :=
-    --     begin
-    --       simp [hf],
-    --     end, 
-    --     simp [hf_t],
-    --     apply exec_append_trans,
-    --     apply int.of_nat (list.length (bcomp b1 false (↑(list.length (bcomp b2 (bval b1 s) n)) + n))),
-    --     {
-    --       have h_bcomp : exec (bcomp b1 false (↑(list.length (bcomp b2 (bval b1 s) n)) + n)) (0, s, stk) (↑(list.length(bcomp b1 false (↑(list.length (bcomp b2 (bval b1 s) n)) + n))), s, stk) :=
-    --       begin
-    --       sorry,  -- this part does not make sense to me
-    --       end,
-    --       apply h_bcomp,
-    --     },
-    --     simp,
-    --     {
-    --       simp,
-    --       have h_bcomp_b2 : exec (bcomp b2 (bval b1 s) n) (0, s, stk) (↑(list.length (bcomp b2 (bval b1 s) n)) + n, s, stk) :=
-    --       begin
-    --         have h_b2_f : f = bval b2 s :=
-    --         begin
-    --           simp [h_b2, hf],
-    --         end,
-    --         simp [h_b2_f] at ih2,
-    --         simp [h_b2] at ih2,
-    --         by_cases h_b1 : (bval b1 s),
-    --         {
-    --           simp [h_b1],  -- how to unify false and true in this case?
-    --           sorry, 
-    --         },
-    --         {
-    --           simp [h_b1],
-    --           apply ih2,
-    --         }
-    --       end,
-    --       apply h_bcomp_b2,
-    --     },
-    --     finish,
-    --   },
-    -- },
-    -- {
-    --   sorry,
-    -- }
-    -- by_cases hf : (f = true),
-    -- {
-    --   -- simp at *,
-    --   -- simp [hf] at ih1 ih2,
-    --   simp [hf],
-
-    --   apply exec_append_trans,
-    --   apply int.of_nat (list.length (bcomp b1 false ↑(list.length (bcomp b2 true n)))),
-    --   {
-    --     have h_b1_f_b2_t: exec (bcomp b1 false ↑(list.length (bcomp b2 true n))) (0, s, stk) (int.of_nat (list.length (bcomp b1 false ↑(list.length (bcomp b2 true n)))), s, stk) :=
-    --     begin
-    --       simp,
-
-    --     sorry,
-    --     end,
-    --     exact h_b1_f_b2_t,
-    --   },
-    --   simp,
-    --   {
-    --     simp,
-    --     have b2_t : exec (bcomp b2 true n) (0, s, stk) (↑(list.length (bcomp b2 true n)) + ite (f = (bval b1 s ∧ bval b2 s)) n 0, s, stk) :=
-    --     begin
-    --       by_cases h_ite : (f = (bval b1 s ∧ bval b2 s)),
-    --       {
-    --         simp [h_ite],
-    --         simp [hf] at ih1 ih2 h_ite,
-    --         have h_right : (f = bval b2 s) :=
-    --         begin
-    --           simp [h_ite.right],
-    --           simp [hf],
-    --         end,
-    --         simp [h_right] at ih2,
-    --         exact ih2,
-    --       },
-    --       {
-    --         simp [h_ite],
-    --         simp [hf] at ih1 ih2 h_ite,
-    --         by_cases h_b1 : (bval b1 s),
-    --         {
-    --           simp [h_b1] at h_ite,
-    --           have h_right_false : ¬ (f = bval b2 s) :=
-    --           begin
-    --             simp [hf, h_ite],
-    --           end,
-    --           simp [h_right_false] at ih2,
-    --           exact ih2,
-    --         },  
-    --         {
-    --           have h_right_false : ¬ (f = bval b2 s) :=
-    --           begin
-    --             simp [hf, h_ite],
-    --             sorry, -- since h_b1 is false, i cannot use it to get ¬ bval b2 s - HOW?
-    --           end,
-    --           simp [h_right_false] at ih2,
-    --           exact ih2,
-    --         },
-    --       }
-    --     end,
-    --     exact b2_t,
-    --   },
-    --   finish,-- TODO: TD3: have an exec not like ih but (bcomp b1 false (↑(list.length (bcomp b2 false n)) + n))
-    -- },
-    -- {
-    --   simp [hf],
-    --   have h_f_false : f = ¬true :=
-    --   begin
-    --     apply not_not_eq, 
-    --     exact hf,
-    --   end,
-    --   simp at h_f_false,
-    --   apply exec_append_trans,
-    --   apply int.of_nat (list.length (bcomp b1 false ↑(list.length (bcomp b2 true n)))),
-    --   {
-    --     have h_b1_f_b2_t: exec (bcomp b1 false (↑(list.length (bcomp b2 f n)) + n)) (0, s, stk) (int.of_nat (list.length (bcomp b1 false (↑(list.length (bcomp b2 f n)) + n))), s, stk) :=
-    --     begin
-    --       simp,
-
-    --     sorry,
-    --     end,
-    --     exact h_b1_f_b2_t,
-    --   },
-    --   simp,
-    --   {
-    --     simp,
-    --     have b2_t : exec (bcomp b2 true n) (0, s, stk) (↑(list.length (bcomp b2 true n)) + ite (f = (bval b1 s ∧ bval b2 s)) n 0, s, stk) :=
-    --     begin
-    --       by_cases h_ite : (f = (bval b1 s ∧ bval b2 s)),
-    --       {
-    --         simp [h_ite],
-    --         simp [h_f_false] at ih1 ih2 h_ite,
-    --         have h_right : (f = bval b2 s) :=
-    --         begin
-    --           sorry,
-    --         end,
-    --         simp [h_right] at ih2,
-    --         exact ih2,
-    --       },
-    --       {
-    --         simp [h_ite],
-    --         simp [hf] at ih1 ih2 h_ite,
-    --         by_cases h_b1 : (bval b1 s),
-    --         {
-    --           simp [h_b1] at h_ite,
-    --           have h_right_false : ¬ (f = bval b2 s) :=
-    --           begin
-    --             simp [hf, h_ite],
-    --           end,
-    --           simp [h_right_false] at ih2,
-    --           exact ih2,
-    --         },  
-    --         {
-    --           have h_right_false : ¬ (f = bval b2 s) :=
-    --           begin
-    --             simp [hf, h_ite],
-    --             sorry, -- since h_b1 is false, i cannot use it to get ¬ bval b2 s - HOW?
-    --           end,
-    --           simp [h_right_false] at ih2,
-    --           exact ih2,
-    --         },
-    --       }
-    --     end,
-    --     exact b2_t,
-    --   },
-    --   finish,-- TODO: TD3: have an exec not like ih but (bcomp b1 false (↑(list.length (bcomp b2 false n)) + n))
-    -- }
   },
   case Less : a1 a2{  --DONE
     simp [bcomp],
