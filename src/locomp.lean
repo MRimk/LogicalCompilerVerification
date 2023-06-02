@@ -241,7 +241,7 @@ def nth : list instr → ℤ → instr
   check if pc is in a valid location in the list 
 -/
 def exec1  (li : list instr) (c : config)  (c' : config) : Prop := 
-(∃ i s stk, c = (i, s, stk) ∧ c' = iexec (nth li i) (i, s, stk) ∧ 0 ≤ i ∧ i < li.length)  
+( c' = iexec (nth li c.fst) c ∧ 0 ≤ c.fst ∧ c.fst < li.length)  
 
 /-
 lemma exec1I [intro, code_pred_intro]:
@@ -258,10 +258,7 @@ lemma exec1I {li : list instr} {i s stk c'}
   exec1 li (i, s, stk) c' := 
   begin 
     simp [exec1],
-    use i,
-    use s,
-    use stk,
-    simp [h1, h2, h3]
+    simp [h1, h2, h3],
   end
 
 
@@ -549,62 +546,41 @@ lemma exec1_appendR {li c c' li'} (h: exec1 li c c'):
 exec1 (li ++ li') c c' :=
 begin
   simp [exec1],
-  obtain ⟨i, s, stk, hi, h_conds⟩ := h,
+  obtain ⟨h_c', h_zero, h_li⟩ := h,
   induction li,
   case list.nil { 
-    use i,
-    use s,
-    use stk,
     unfold_coes, --for int.of_nat in the goal - types
-    split,
-    {
-      apply hi,
-    },
-    simp at h_conds,
     have h_f : false, begin 
-      have h_imore: 0 ≤ i, from h_conds.right.left,
-      have h_iless: i < 0, from  h_conds.right.right,
+      simp at h_li,
       linarith,
     end,
-    apply false.elim,
-    show false, from h_f,
+    cc,    
   },
   case list.cons {
-    by_cases h_izero : (i = 0),
+    by_cases h_izero : (c.fst = 0),
     {
-      use i,
-      use s,
-      use stk,
       simp,
       simp [nth, h_izero] at *,
       split,
-      {apply hi,},
-      split,
-      {apply h_conds,},
-      {linarith,},
+      {apply h_c',},
+      linarith,
     },
     {
-      use i,
-      use s,
-      use stk,
-      have h_inneg : 0 ≤ i, from h_conds.right.left,  
-      have h_ipos : 0 ≤ i - 1, from i_pos h_conds.right.left h_izero, 
-      split,
-      {apply hi,},
+      have h_inneg : 0 ≤ c.fst, from h_zero,  
+      have h_ipos : 0 ≤ c.fst - 1, from i_pos h_zero h_izero, 
       split,
       {
-        clear hi,
-        simp [nth] at h_conds,
-        simp [h_izero] at h_conds,
+        simp [nth] at h_c',
+        simp [h_izero] at h_c',
         simp [nth],
         simp [h_izero],
-        have h_append_eq : nth (li_tl ++ li') (i - 1) = nth li_tl (i - 1) :=
+        have h_append_eq : nth (li_tl ++ li') (c.fst - 1) = nth li_tl (c.fst - 1) :=
         begin 
           rw [nth_append],
           {
-            have h_ite : i - 1 < int.of_nat (list.length li_tl) :=
+            have h_ite : c.fst - 1 < int.of_nat (list.length li_tl) :=
             begin
-              have h_less : i < ↑(list.length li_tl) + 1, from h_conds.right.right,
+              have h_less : c.fst < ↑(list.length li_tl) + 1, from h_li,
               simp,
               linarith,
             end,
@@ -616,17 +592,15 @@ begin
           },
           {exact h_ipos,},
         end,
-        rw h_conds.left,
+        rw h_c',
         rw h_append_eq,
       },
       split,
+      {apply h_inneg,},
       {
-        apply h_conds.right.left,
-      },
-      {
-        have h_length : i < ↑(list.length (li_hd :: li_tl)), from h_conds.right.right,
+        have h_length : c.fst < ↑(list.length (li_hd :: li_tl)), from h_li,
         linarith,
-      },
+      }
     },
   },
 end
@@ -674,109 +648,32 @@ lemma exec1_appendL {i i' :ℤ} {li li' s stk s' stk'}
 (h_li : exec1 li (i, s, stk) (i', s', stk')) :
 exec1 (li' ++ li) ((list.length li') + i, s, stk) ((list.length li') + i', s', stk') :=
 begin
-  induction li' generalizing i,
-  case list.nil {
-    simp,
-    exact h_li,
+  simp [exec1],
+  obtain ⟨ h_c', h_zero, h_length⟩ := h_li,
+  simp at *,
+  have h_li_i : 0 ≤ ↑(list.length li') + i :=
+  begin
+    linarith,
+  end,
+  split,
+  {
+    simp [iexec_shift, nth_append h_li_i],
+    by_cases h_less : (i < 0),
+    {
+      apply false.elim,
+      linarith,
+    },
+    {
+      simp [h_less],
+      apply h_c',
+    }
   },
-  case list.cons {
-    simp [exec1],
-    simp [exec1] at li'_ih,
-    obtain ⟨ih, sh, stkh, hi, h_conds⟩ := h_li,
-    use i,
-    use s,
-    use stk,
-    simp at hi,
-    -- simp [hi] at h_conds,
-    have h_i : ih = i := 
-    begin symmetry, exact hi.left, end,
-    have h_s : sh = s := 
-    begin symmetry, exact hi.right.left, end,
-    have h_stk : stkh = stk := 
-    begin symmetry, exact hi.right.right, end,
-    rw [h_i] at h_conds,
-    rw [h_s] at h_conds,
-    rw [h_stk] at h_conds,
-    clear h_i,
-    clear h_s,
-    clear h_stk,
-    split,
-    {
-      simp [hi],
-      specialize li'_ih h_conds.left,
-      specialize li'_ih h_conds.right.left,
-      specialize li'_ih h_conds.right.right,
-      -- how to use this: specialize li'_ih h_conds.left,
-      -- how can this ever be true? ↑(list.length li'_tl) + 1 = 0
-      sorry,
-    },
-    {
-      simp [nth],
-      by_cases h_izero : (i = 0),
-      {
-        simp [h_izero],
-        split,
-        {
-          specialize li'_ih h_conds.left,
-
-          specialize li'_ih h_conds.right.left,
-          specialize li'_ih h_conds.right.right,
-          cases li'_ih with i_ih li'_ih_i,
-          cases li'_ih_i with s_ih li'_ih_i_s,
-          cases li'_ih_i_s with stk_ih li'_ih_full,
-          
-          have ih_left : ↑(list.length li'_tl) + i = i_ih ∧ s = s_ih ∧ stk = stk_ih, from li'_ih_full.left,
-          have h_i : i_ih = ↑(list.length li'_tl) + i := 
-            begin symmetry, exact ih_left.left, end,
-          have h_s : s_ih = s := 
-            begin symmetry, exact ih_left.right.left, end,
-          have h_stk : stk_ih = stk := 
-            begin symmetry, exact ih_left.right.right, end,
-          rw [h_i] at li'_ih_full,
-          rw [h_s] at li'_ih_full,
-          rw [h_stk] at li'_ih_full,
-          simp [nth_append] at li'_ih_full,
-
-          simp [h_izero] at h_conds,
-
-          -- maybe iexec shift can be applied here?
-          sorry,
-        },
-        linarith,
-      },
-      {
-        simp [h_izero],
-        split,
-        {
-
-          specialize li'_ih h_conds.left,
-
-          specialize li'_ih h_conds.right.left,
-          specialize li'_ih h_conds.right.right,
-          cases li'_ih with i_ih li'_ih_i,
-          cases li'_ih_i with s_ih li'_ih_i_s,
-          cases li'_ih_i_s with stk_ih li'_ih_full,
-          
-          have ih_left : ↑(list.length li'_tl) + i = i_ih ∧ s = s_ih ∧ stk = stk_ih, from li'_ih_full.left,
-          have h_i : i_ih = ↑(list.length li'_tl) + i := 
-            begin symmetry, exact ih_left.left, end,
-          have h_s : s_ih = s := 
-            begin symmetry, exact ih_left.right.left, end,
-          have h_stk : stk_ih = stk := 
-            begin symmetry, exact ih_left.right.right, end,
-          rw [h_i] at li'_ih_full,
-          rw [h_s] at li'_ih_full,
-          rw [h_stk] at li'_ih_full,
-          simp [nth_append] at li'_ih_full,
-          
-          -- the gap does not seem to easily add up
-          sorry,
-        },
-        split,
-        {apply h_conds.right.left},
-        {linarith,}
-      }
-    },
+  split,
+  {
+    apply h_li_i,
+  },
+  {
+    apply h_length,
   }
 end
 
@@ -788,7 +685,7 @@ lemma exec_appendL:
   P' @ P ⊢ (size(P')+i,s,stk) →* (size(P')+i',s',stk')"
   by (induction rule: exec_induct) (blast intro: star.step exec1_appendL)+
 -/
-lemma exec_appendL {i i' :ℤ} {li li' i s stk i' s' stk'}
+lemma exec_appendL {i i' :ℤ} (li li' i s stk i' s' stk')
 (h_single : exec li (i, s, stk) (i', s', stk')) :
 exec (li' ++ li) (list.length li' + i, s, stk) (list.length li' + i', s', stk') :=
 begin
@@ -797,19 +694,17 @@ begin
     apply rtc.star.refl,
   },
   case LoComp.rtc.star.tail : b hab hbc ih{
-    have h_b : b = (i', s', stk') :=
-    begin
-      sorry,
-    end,
+    specialize ih li' b.fst b.snd.fst b.snd.snd,
+    simp at ih,
     apply rtc.star.tail,
-    {      
-      specialize ih h_b,
-      apply li',
+    {
       apply ih,
     },
     {
+      have h_b : b.snd = (b.snd.fst, b.snd.snd) := by finish,
+      rw [h_b], 
       apply exec1_appendL,
-      simp [h_b] at hbc,
+      simp,
       exact hbc,
     },
   },
@@ -835,9 +730,10 @@ exec (instr :: li) (1, s, stk) (1 + j, t, stk') :=
 begin 
   have h_shift : exec ([instr] ++ li) ((list.length [instr]) + 0, s, stk) ((list.length [instr]) + j, t, stk') :=
   begin 
-    apply exec_appendL h,
+    apply exec_appendL,
     apply j,
     apply j,
+    apply h,
   end,
   simp at h_shift,
   exact h_shift,
@@ -861,9 +757,10 @@ exec (li' ++ li) (i, s, stk) (i', s', stk') :=
 begin
   have h_append : exec (li' ++ li) (list.length li' + (i - list.length li'), s, stk) (list.length li' + j, s', stk') :=
   begin
-    apply exec_appendL h2,
+    apply exec_appendL,
     apply i,
     apply i,
+    apply h2,
   end,
   simp at h_append,
   rw [h3],
@@ -900,9 +797,10 @@ begin
   exact h_appendR_li',
   have h_appendL_li : exec (li ++ li') (list.length li + (i' - list.length li), s', stk') (list.length li + i'', s'', stk'') :=
   begin
-    apply exec_appendL h3,
+    apply exec_appendL,
     apply i',
     apply i',
+    apply h3,
   end,
   simp at h_appendL_li,
   rw [h4],
@@ -1209,7 +1107,7 @@ begin
   exact h_not_eq,
 end
 
-lemma bcomp_Bc_correct {n :ℤ} {b f s stk}
+lemma bcomp_Bc_correct {n :ℤ} {b f s stk} --TODO: fix list.nil edgecase
 (h_nneg : 0 ≤ n) :
 exec (bcomp (Bc b) f n) (0, s, stk) (↑(list.length (bcomp (Bc b) f n)) + ite (f = bval (Bc b) s) n 0, s, stk) :=
 begin 
@@ -1269,7 +1167,7 @@ begin
       exact b_ih,
     }
   },
-  case And : b1 b2 ih1 ih2{ --INCOMPLETE: structure of the proof 
+  case And : b1 b2 ih1 ih2{ --INCOMPLETE: structure of the proof? 
     -- specialize ih1 h_nneg,
     -- apply f,
     -- specialize ih2 h_nneg,
@@ -1913,7 +1811,10 @@ induction c generalizing stk,
     apply int.of_nat (list.length (bcomp cond false (↑(list.length (ccomp c1)) + 1))),
     {
       have h_bcomp : exec (bcomp cond false (↑(list.length (ccomp c1)) + 1)) (0, s, stk) (int.of_nat (list.length (bcomp cond false (↑(list.length (ccomp c1)) + 1))), s, stk) := 
-      begin sorry, end,
+      begin 
+        -- apply bcomp_correct,
+        sorry,
+      end,
       exact h_bcomp,
     },
     simp,
@@ -1929,7 +1830,15 @@ induction c generalizing stk,
             apply ch1,
             simp at h_step,
             --TODO: extract (c1, s) ⟹ t from h_step
-            sorry,
+            by_cases h_cond: (bval cond s),
+            {
+              simp [h_cond] at h_step,
+              apply h_step,
+            },
+            {
+              simp [h_cond] at h_step,
+              sorry,  -- this is the false case and i don't know how to handle it
+            },
           end,
           exact h_ccomp1,
         },
@@ -2017,5 +1926,6 @@ TD3 : bcomp and - how to get a correct exec?
 TD4 : How to specify this step exactly to t?
 TD5 : silly loop notation clarification? - not important
 TD6: noncomputable - is it correct? - not important
+TD7: Do I need to do small_step semantics? they are not in the .thy file but are in the chapter 8
 -/
 end LoComp
