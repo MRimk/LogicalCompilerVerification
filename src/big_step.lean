@@ -98,9 +98,9 @@ begin
     { refl } }
 end
 
-lemma big_step_terminates {S s} :
-  ∃t, (S, s) ⟹ t :=
-sorry   -- unprovable
+-- lemma big_step_terminates {S s} :
+--   ∃t, (S, s) ⟹ t :=
+-- sorry   -- unprovable
 
 lemma big_step_doesnt_terminate {S s t} :
   ¬ (While (Bc ( true)) S, s) ⟹ t :=

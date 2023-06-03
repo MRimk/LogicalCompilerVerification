@@ -506,7 +506,7 @@ induction c generalizing stk,
     apply h_c1_c2_fst,
     apply h_c1_c2_snd,
   },
-  case If : cond c1 c2 ch1 ch2 {  --INCOMPLETE: stuck on h_step and exec_cons_1, and bcomp cond
+  case If : cond c1 c2 ch1 ch2 {  --DONE
     simp [ccomp],
     simp at h_step,
 
@@ -517,85 +517,80 @@ induction c generalizing stk,
       apply exec_append_trans,
       apply int.of_nat (bcomp cond false (↑((ccomp c1).length) + 1)).length,
       {
-        have h_bcomp : exec (bcomp cond false (↑((ccomp c1).length) + 1)) (0, s, stk) (↑ ((bcomp cond false (↑((ccomp c1).length) + 1)).length) + ite (false = bval cond s) (ccomp c1).length 0 , s, stk) :=
+        have h_bcomp : exec (bcomp (cond) (false) (↑((ccomp c1).length) + 1)) (0, s, stk) (↑ ((bcomp (cond) (false) (↑((ccomp c1).length) + 1)).length) + ite (false = bval cond s) (↑((ccomp c1).length) + 1) 0 , s, stk) :=
         begin
-          -- apply bcomp_correct, -- IT IS POSSIBLE TO FIGURE IT OUT BUT HAVEN'T YET
-          sorry,
+          apply bcomp_correct,
+          linarith,
         end,
         apply h_bcomp,
       },
       simp,
-      {
-        simp [h_cond],
-      },
+      {simp [h_cond],},
       {
         simp,
         simp [h_cond],
-        have h_ccomp_jmp : exec (ccomp c1 ++ JMP ↑((ccomp c2).length) :: ccomp c2) (0, s, stk) ((↑((ccomp c1).length) + (↑((ccomp c2).length) + 1)), t, stk) := 
+        have h_ccomp_jmp : exec (ccomp c1 ++ JMP ↑((ccomp c2).length) :: ccomp c2) (0, s, stk) (↑((ccomp c1).length) + (↑((ccomp c2).length) + 1), t, stk) := 
         begin
-        sorry,
+          apply exec_append_trans,
+          apply int.of_nat ((ccomp c1).length),
+          apply ch1,
+          apply h_step,
+          simp,
+          {
+            simp,
+            have h_jmp_c2 : exec (JMP ↑((ccomp c2).length) :: ccomp c2) (0, t, stk) (↑((ccomp c2).length) + 1, t, stk) :=
+            begin
+              apply rtc.star.single,
+              simp [exec1, nth],
+              simp [iexec],
+              finish, 
+            end,
+            apply h_jmp_c2,
+          },
+          simp,
         end,
         apply h_ccomp_jmp,
       },
       simp,
     },
     { -- else
-      sorry,
-    },
+      simp [h_cond] at h_step,
 
-
-/-
-    -- ↑(list.length (bcomp cond false (↑(list.length (ccomp c1)) + 1))) + (↑(list.length (ccomp c1)) + (↑(list.length (ccomp c2)) + 1))
-    apply exec_append_trans,
-    apply int.of_nat (list.length (bcomp cond false (↑(list.length (ccomp c1)) + 1))),
-    {
-      have h_bcomp : exec (bcomp cond false (↑(list.length (ccomp c1)) + 1)) (0, s, stk) (int.of_nat (list.length (bcomp cond false (↑(list.length (ccomp c1)) + 1))), s, stk) := 
-      begin 
-        -- apply bcomp_correct,
-        sorry,
-      end,
-      exact h_bcomp,
-    },
-    simp,
-    {
+      apply exec_append_trans,
+      apply int.of_nat (bcomp cond false (↑((ccomp c1).length) + 1)).length,
+      {
+        have h_bcomp : exec (bcomp (cond) (false) (↑((ccomp c1).length) + 1)) (0, s, stk) (↑ ((bcomp (cond) (false) (↑((ccomp c1).length) + 1)).length) + ite (false = bval cond s) (↑((ccomp c1).length) + 1) 0 , s, stk) :=
+        begin
+          apply bcomp_correct,
+          linarith,
+        end,
+        apply h_bcomp,
+      },
       simp,
-      have h_ccomp_jmp : exec (ccomp c1 ++ JMP ↑(list.length (ccomp c2)) :: ccomp c2) (0, s, stk) ((↑(list.length (ccomp c1)) + (↑(list.length (ccomp c2)) + 1)), t, stk) :=
-      begin 
-        apply exec_append_trans,
-        apply int.of_nat (list.length (ccomp c1)),
-        {
-          have h_ccomp1 : exec (ccomp c1) (0, s, stk) (↑(list.length (ccomp c1)), t, stk) :=
-          begin
-            apply ch1,
-            -- simp at h_step,
-            --TODO: extract (c1, s) ⟹ t from h_step
-            by_cases h_cond: (bval cond s),
-            {
-              simp [h_cond] at h_step,
-              apply h_step,
-            },
-            {
-              simp [h_cond] at h_step,
-              sorry,  -- this is the false case and i don't know how to handle it
-            },
-          end,
-          exact h_ccomp1,
-        },
+      {
+        simp [h_cond],
+        linarith,
+      },
+      {
         simp,
-        {
+        simp [h_cond],
+        have h_ccomp_jmp : exec (ccomp c1 ++ JMP ↑((ccomp c2).length) :: ccomp c2) (↑((ccomp c1).length) + 1, s, stk) (↑((ccomp c1).length) + (↑((ccomp c2).length) + 1), t, stk) := 
+        begin
+          apply exec_appendL_if,
           simp,
-          have h_jmp : exec (JMP ↑(list.length (ccomp c2)) :: ccomp c2) (0, t, stk) ((↑(list.length (ccomp c2)) + 1), t, stk) :=
-          begin
-            sorry, -- exec_cons_1 but it does not work due to being from 1 not from 0
-          end,
-          exact h_jmp,
-        },
-        simp,
-      end,
-      exact h_ccomp_jmp,
+          {
+            simp,
+            apply exec_cons_1,
+            apply ch2,
+            apply h_step,
+          },
+          simp,
+          finish,
+        end,
+        apply h_ccomp_jmp,
+      },
+      simp,
     },
-    simp,
-    -/
   },
   case While : cond c ch{  --INCOMPLETE: bcomp reduce and h_step dependancy on bcond and jmp i calculation
     simp [ccomp],
