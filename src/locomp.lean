@@ -11,14 +11,10 @@ open bexp
 open com
 
 /-
-declare Let_def[simp]
 
+# Compilation correctness
 
-subsection "Compilation"
-
-
--/
-/-
+## acomp correctness
 lemma acomp_correct[intro]:
   "acomp a ⊢ (0,s,stk) →* (size(acomp a),s,aval a s#stk)"
 by (induction a arbitrary: stk) fastforce+
@@ -209,23 +205,8 @@ end
 
 
 /-
-fun bcomp :: "bexp ⇒ bool ⇒ int ⇒ instr list" where
-"bcomp (Bc v) f n = (if v=f then [JMP n] else [])" |
-"bcomp (Not b) f n = bcomp b (¬f) n" |
-"bcomp (And b1 b2) f n =
- (let cb2 = bcomp b2 f n;
-        m = if f then size cb2 else (size cb2)+n;
-      cb1 = bcomp b1 False m
-  in cb1 @ cb2)" |
-"bcomp (Less a1 a2) f n =
- acomp a1 @ acomp a2 @ (if f then [JMPLESS n] else [JMPGE n])"
 
-value
-  "bcomp (And (Less (V ''x'') (V ''y'')) (Not(Less (V ''u'') (V ''v''))))
-     False 3"
--/
-
-/-
+## bcomp correctness
 lemma bcomp_correct[intro]:
   fixes n :: int
   shows
@@ -413,30 +394,9 @@ begin
 end
 
 
-
-/-
-fun ccomp :: "com ⇒ instr list" where
-"ccomp SKIP = []" |
-"ccomp (x ::= a) = acomp a @ [STORE x]" |
-"ccomp (c⇩1;;c⇩2) = ccomp c⇩1 @ ccomp c⇩2" |
-"ccomp (IF b THEN c⇩1 ELSE c⇩2) =
-  (let cc⇩1 = ccomp c⇩1; cc⇩2 = ccomp c⇩2; cb = bcomp b False (size cc⇩1 + 1)
-   in cb @ cc⇩1 @ JMP (size cc⇩2) # cc⇩2)" |
-"ccomp (WHILE b DO c) =
- (let cc = ccomp c; cb = bcomp b False (size cc + 1)
-  in cb @ cc @ [JMP (-(size cb + size cc + 1))])"
-
-
-value "ccomp
- (IF Less (V ''u'') (N 1) THEN ''u'' ::= Plus (V ''u'') (N 1)
-  ELSE ''v'' ::= V ''u'')"
-
-value "ccomp (WHILE Less (V ''u'') (N 1) DO (''u'' ::= Plus (V ''u'') (N 1)))"
--/
-
 /-
 
-subsection "Preservation of semantics"
+## Preservation of semantics
 
 lemma ccomp_bigstep:
   "(c,s) ⇒ t ⟹ ccomp c ⊢ (0,s,stk) →* (size(ccomp c),t,stk)"
@@ -512,29 +472,79 @@ induction c generalizing stk,
     simp,
   },
   case Seq : c1 c2 ch1 ch2 {  -- INCOMPLETE: h_step problem
-    simp [ccomp],
-    simp [big_step_seq_iff] at h_step,  
-    cases h_step with u u_steps,    --TODO: TD4: How to specify this step exactly to t?
-    apply exec_append_trans,
-    apply int.of_nat (list.length (ccomp c1)),
-    apply ch1,
-    { -- prove (c1, s) ⟹ t
-      sorry,
-    },
-    simp,
-    {
+    have h_c1_c2_fst : exec (ccomp c1 ++ ccomp c2) (0, s, stk) (↑((ccomp c1).length), t, stk) := 
+    begin 
+      simp [big_step_seq_iff] at h_step,  
+
+      cases h_step with u u_steps,    --TODO: TD4: How to specify this step exactly to t?
+      apply exec_append_trans,
+      apply int.of_nat ((ccomp c1).length),
+      {
+        have h_c1 : exec (ccomp c1) (0, s, stk) (↑((ccomp c1).length), u, stk) := sorry,
+        apply h_c1,
+      },
       simp,
-      have h_ccomp2 : exec (ccomp c2) (0, t, stk) (↑(list.length (ccomp c2)), t, stk) :=
-      begin
-        -- set the c1 step up to t and this t to t 
-        sorry,
-      end,
-      exact h_ccomp2,
-    },
-    refl,
+      {
+        simp,
+        have h_c2 : exec (ccomp c2) (0, u, stk) (0, t, stk) := sorry,
+        apply h_c2,
+      },
+      simp, 
+    end,
+    have h_c1_c2_snd : exec (ccomp c1 ++ ccomp c2) (↑((ccomp c1).length), t, stk) (↑((ccomp c1).length) + ↑((ccomp c2).length), t, stk) := 
+    begin 
+      simp [big_step_seq_iff] at h_step,  
+      cases h_step with u u_steps,    --TODO: TD4: How to specify this step exactly to t?
+      
+
+      sorry, 
+    end,
+
+    simp [ccomp],
+
+    apply rtc.star.trans,
+    apply h_c1_c2_fst,
+    apply h_c1_c2_snd,
   },
   case If : cond c1 c2 ch1 ch2 {  --INCOMPLETE: stuck on h_step and exec_cons_1, and bcomp cond
     simp [ccomp],
+    simp at h_step,
+
+    by_cases h_cond : (bval cond s),
+    { -- if then
+      simp [h_cond] at h_step,
+
+      apply exec_append_trans,
+      apply int.of_nat (bcomp cond false (↑((ccomp c1).length) + 1)).length,
+      {
+        have h_bcomp : exec (bcomp cond false (↑((ccomp c1).length) + 1)) (0, s, stk) (↑ ((bcomp cond false (↑((ccomp c1).length) + 1)).length) + ite (false = bval cond s) (ccomp c1).length 0 , s, stk) :=
+        begin
+          -- apply bcomp_correct, -- IT IS POSSIBLE TO FIGURE IT OUT BUT HAVEN'T YET
+          sorry,
+        end,
+        apply h_bcomp,
+      },
+      simp,
+      {
+        simp [h_cond],
+      },
+      {
+        simp,
+        simp [h_cond],
+        have h_ccomp_jmp : exec (ccomp c1 ++ JMP ↑((ccomp c2).length) :: ccomp c2) (0, s, stk) ((↑((ccomp c1).length) + (↑((ccomp c2).length) + 1)), t, stk) := 
+        begin
+        sorry,
+        end,
+        apply h_ccomp_jmp,
+      },
+      simp,
+    },
+    { -- else
+      sorry,
+    },
+
+
+/-
     -- ↑(list.length (bcomp cond false (↑(list.length (ccomp c1)) + 1))) + (↑(list.length (ccomp c1)) + (↑(list.length (ccomp c2)) + 1))
     apply exec_append_trans,
     apply int.of_nat (list.length (bcomp cond false (↑(list.length (ccomp c1)) + 1))),
@@ -557,7 +567,7 @@ induction c generalizing stk,
           have h_ccomp1 : exec (ccomp c1) (0, s, stk) (↑(list.length (ccomp c1)), t, stk) :=
           begin
             apply ch1,
-            simp at h_step,
+            -- simp at h_step,
             --TODO: extract (c1, s) ⟹ t from h_step
             by_cases h_cond: (bval cond s),
             {
@@ -585,6 +595,7 @@ induction c generalizing stk,
       exact h_ccomp_jmp,
     },
     simp,
+    -/
   },
   case While : cond c ch{  --INCOMPLETE: bcomp reduce and h_step dependancy on bcond and jmp i calculation
     simp [ccomp],
