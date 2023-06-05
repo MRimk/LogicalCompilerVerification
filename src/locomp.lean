@@ -455,9 +455,17 @@ begin
     },
     simp,
   },
-  case seq {
+  case seq : c1 c2 s u t{ -- DONE
     simp [ccomp],
-    sorry,
+    apply exec_append_trans,
+    apply int.of_nat ((ccomp c1).length),
+    apply ih_h_step,
+    simp,
+    {
+      simp,
+      apply ih_h_step_1,
+    },
+    simp,
   },
   case ite_true : b c1 c2 { --DONE
     simp [ccomp],
@@ -674,42 +682,6 @@ begin
     },
     simp,
   },
--- induction c generalizing stk,
---   case Seq : c1 c2 ch1 ch2 {  -- INCOMPLETE: h_step problem
---     have h_c1_c2_fst : exec (ccomp c1 ++ ccomp c2) (0, s, stk) (↑((ccomp c1).length), t, stk) := 
---     begin 
---       simp [big_step_seq_iff] at h_step,  
-
---       cases h_step with u u_steps,    --TODO: TD4: How to specify this step exactly to t?
---       apply exec_append_trans,
---       apply int.of_nat ((ccomp c1).length),
---       {
---         have h_c1 : exec (ccomp c1) (0, s, stk) (↑((ccomp c1).length), u, stk) := sorry,
---         apply h_c1,
---       },
---       simp,
---       {
---         simp,
---         have h_c2 : exec (ccomp c2) (0, u, stk) (0, t, stk) := sorry,
---         apply h_c2,
---       },
---       simp, 
---     end,
---     have h_c1_c2_snd : exec (ccomp c1 ++ ccomp c2) (↑((ccomp c1).length), t, stk) (↑((ccomp c1).length) + ↑((ccomp c2).length), t, stk) := 
---     begin 
---       simp [big_step_seq_iff] at h_step,  
---       cases h_step with u u_steps,    --TODO: TD4: How to specify this step exactly to t?
-      
-
---       sorry, 
---     end,
-
---     simp [ccomp],
-
---     apply rtc.star.trans,
---     apply h_c1_c2_fst,
---     apply h_c1_c2_snd,
---   },
 end
 
 
