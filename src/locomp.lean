@@ -284,34 +284,101 @@ begin
     }
   },
   case And : b1 b2 ih1 ih2{ --INCOMPLETE: structure of the proof? 
-    specialize ih1 false (↑(list.length (bcomp b2 f n)) + ite (f = bval b2 s) n 0),
-    have h_b2_len_nneg : 0 ≤ (↑(list.length (bcomp b2 f n)) + ite (f = bval b2 s) n 0) :=
-    begin
-      have h_b2_len : 0 ≤ ↑(list.length (bcomp b2 f n)) := by simp [list.length_nneg],
-      have h_ite_leng : 0 ≤  ite (f = bval b2 s) n 0 := begin
-        by_cases h_ite : (f = bval b2 s),
-        {
-          simp [h_ite],
-          apply h_nneg,
-        },
-        {simp [h_ite],}
-      end,
-      linarith,
-    end,
-    simp [h_b2_len_nneg] at ih1,
-    specialize ih2 f n,
-    simp [h_nneg] at ih2,
-
-    simp [bcomp],
-    by_cases h_f : (f = true),
+    by_cases h_and : (bval b1 s ∧ bval b2 s),
     {
-      simp [h_f],
-      sorry,
+      by_cases h_f : (f = true),
+      {
+        simp [bcomp],
+        simp [h_f],
+        rw [bval],
+        have h_eq : f = bval b1 s ∧ bval b2 s := sorry,
+        simp [h_eq],
+        apply exec_append_trans,
+        apply int.of_nat ((bcomp b1 false ↑((bcomp b2 true n).length)).length),
+        {
+          specialize ih1 false (int.of_nat (list.length (bcomp b2 f n))),
+          simp at ih1,
+          have h_f_b1 : f = bval b1 s := sorry,
+          simp [h_f_b1, h_and.left] at ih1,
+          apply ih1,
+        },
+        simp,
+        {
+          simp,
+          specialize ih2 true n,
+          simp [h_nneg] at ih2,
+          simp [h_and.right] at ih2,
+          apply ih2,
+        },
+        finish,
+      },
+      {
+        have h_notf : ¬f := sorry,
+        simp [bcomp],
+        simp [h_f],
+        rw [bval],
+        have h_eq : ¬ f = bval b1 s ∧ bval b2 s := sorry,
+        simp [h_eq],
+        apply exec_append_trans,
+        apply int.of_nat ((bcomp b1 false (↑((bcomp b2 f n).length) + n)).length),
+        {
+          specialize ih1 false (int.of_nat (list.length (bcomp b2 f n)) + n),
+          simp at ih1,
+          have h_f_b1 : ¬ f = bval b1 s := sorry,
+          simp [h_f_b1, h_and.left] at ih1,
+          have h_imp_nneg : 0 ≤ ↑((bcomp b2 f n).length) + n := sorry,
+          simp [h_imp_nneg] at ih1,
+          apply ih1,
+        },
+        simp,
+        {
+          simp,
+          specialize ih2 f n,
+          simp [h_nneg] at ih2,
+          have h_f_b2 : ¬ f = bval b2 s := sorry,
+          simp [h_f_b2] at ih2,
+          apply ih2,
+        },
+        simp,
+      },
     },
     {
-      simp [h_f],
-      sorry,
+      by_cases h_f : (f = true),
+      {
+        sorry,
+      },
+      {
+        sorry,
+      }
     }
+    -- specialize ih1 false (↑(list.length (bcomp b2 f n)) + ite (f = bval b2 s) n 0),
+    -- have h_b2_len_nneg : 0 ≤ (↑(list.length (bcomp b2 f n)) + ite (f = bval b2 s) n 0) :=
+    -- begin
+    --   have h_b2_len : 0 ≤ ↑(list.length (bcomp b2 f n)) := by simp [list.length_nneg],
+    --   have h_ite_leng : 0 ≤  ite (f = bval b2 s) n 0 := begin
+    --     by_cases h_ite : (f = bval b2 s),
+    --     {
+    --       simp [h_ite],
+    --       apply h_nneg,
+    --     },
+    --     {simp [h_ite],}
+    --   end,
+    --   linarith,
+    -- end,
+    -- simp [h_b2_len_nneg] at ih1,
+    -- specialize ih2 f n,
+    -- simp [h_nneg] at ih2,
+
+    -- simp [bcomp],
+    -- by_cases h_f : (f = true),
+    -- {
+    --   simp [h_f],
+    --   sorry,
+    -- },
+    -- {
+    --   simp [h_f],
+    --   sorry,
+    -- }
   },
   case Less : a1 a2{  --DONE
     simp [bcomp],
