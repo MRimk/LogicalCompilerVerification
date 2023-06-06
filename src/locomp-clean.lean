@@ -1,4 +1,3 @@
--- import .love08_operational_semantics_demo .love01_definitions_and_statements_demo
 import data.real.basic
 import data.vector
 import tactic.explode
@@ -17,7 +16,7 @@ set_option pp.generalized_field_notation false
 
 namespace LoComp
 
-
+/- # Definitions -/
 def vname := string
 
 def val := ℤ
@@ -127,6 +126,7 @@ end rtc
 
 export rtc
 
+/- ## State: variable name → ℤ -/
 
 def state : Type := vname → ℤ
 
@@ -189,7 +189,7 @@ abbreviation head2 (xs : stack) : ℤ := xs.tail.head
 abbreviation tail2 (xs : stack) : stack := xs.tail.tail
 
 
-
+/- ## Instruction -/
 
 inductive instr : Type  -- page 35 
 | LOADI : val → instr
@@ -202,7 +202,7 @@ inductive instr : Type  -- page 35
 | JMP : int → instr
 | JMPLESS : int → instr
 | JMPGE : int → instr
-| NOP : instr           -- this is added to avoid option 
+| NOP : instr   -- this is added to avoid option 
 
 
 open instr
@@ -237,6 +237,7 @@ def nth : list instr → ℤ → instr
 
 
 /- 
+  ## Single step execution
   Execute one instruction
   check if pc is in a valid location in the list 
 -/
@@ -261,17 +262,19 @@ lemma exec1I {li : list instr} {i s stk c'}
     simp [h1, h2, h3],
   end
 
+/- ## Multiple step execution -/
 abbreviation exec (li : list instr) (c : config) (c' : config) : Prop :=
 star (exec1 li) c c'
 
 
 
--- VERIFICATION INFRASTRUCTURE
+/- # Verification infrastructure -/
 
 /-
-lemma iexec_shift [simp]: 
-  "((n+i',s',stk') = iexec x (n+i,s,stk)) = ((i',s',stk') = iexec x (i,s,stk))"
-by(auto split:instr.split)
+  ## iexec shift
+  lemma iexec_shift [simp]: 
+    "((n+i',s',stk') = iexec x (n+i,s,stk)) = ((i',s',stk') = iexec x (i,s,stk))"
+  by(auto split:instr.split)
 -/
 
 
@@ -438,6 +441,8 @@ begin
   }
 end
 
+
+/- ## exec concatenation correctness -/
 
 /-
 lemma inth_append [simp]:
@@ -869,7 +874,7 @@ def bval : bexp → state → Prop
 | (And b1 b2) s := bval b1 s ∧ bval b2 s
 | (Less a1 a2) s := (eval a1 s) < (eval a2 s) 
 
-noncomputable def bcomp : bexp → Prop → ℤ → list instr  --TODO: TD6: find out whether noncomputable is okay
+noncomputable def bcomp : bexp → Prop → ℤ → list instr 
 | (Bc v) f n := if (v = f) then [JMP n] else []
 | (Not b) f n :=  bcomp b (¬ f) n
 | (And b1 b2) f n := 
@@ -1366,7 +1371,6 @@ begin
   },
   case Not : b{ --DONE
     specialize b_ih (¬f) n,
-    -- apply rtc.star.single,
     simp [bcomp],
     rw [bval],
     by_cases h_bisf : (f = bval b s),
@@ -1388,7 +1392,7 @@ begin
       exact b_ih,
     }
   },
-  case And : b1 b2 ih1 ih2{ --INCOMPLETE: error: occurs check failed.
+  case And : b1 b2 ih1 ih2{ --DONE
 
     simp [bcomp, bval],
     by_cases h_f : (f = true),
@@ -1411,24 +1415,48 @@ begin
       },
       {
         simp,
-        specialize ih2 true n,
-        simp [h_nneg] at ih2,
-
-        have h_bcomp2 : exec (bcomp b2 true n) (↑((bcomp b2 true n).length), s, stk) (↑((bcomp b2 true n).length), s, stk) :=
+        have h_last : exec (bcomp b2 true n) (ite (false = bval b1 s) ↑((bcomp b2 true n).length) 0, s, stk) (↑((bcomp b2 true n).length) + ite (f = (bval b1 s ∧ bval b2 s)) n 0, s, stk) :=
         begin
-          apply rtc.star.refl,
+          by_cases (false = bval b1 s),
+          {-- length bcomp b2 - apply h_bcomp2
+            have h_and_false : ¬ f = (bval b1 s ∧ bval b2 s) := 
+            begin
+              rw [h_f],
+              rw [←h],
+              simp,
+            end, 
+            simp [h_and_false],
+            simp [h],
+            have h_bcomp2 : exec (bcomp b2 true n) (↑((bcomp b2 true n).length), s, stk) (↑((bcomp b2 true n).length), s, stk) :=
+            begin
+              apply rtc.star.refl,
+            end,
+            apply h_bcomp2,
+          },
+          {-- 0 - apply ih2
+            simp [h],
+            have h_rw_and : (bval b1 s ∧ bval b2 s) = (bval b2 s) := 
+            begin
+              have h_bval : bval b1 s := 
+              begin
+                have h_not_in : (false = ¬ (bval b1 s)) :=
+                begin
+                  apply not_not_eq,
+                  apply h,
+                end,
+                simp at h_not_in,
+                apply h_not_in,
+              end,
+              simp [h_bval],
+            end,
+            rw [h_rw_and], 
+            specialize ih2 true n,
+            simp [h_nneg] at ih2,
+            rw [h_f],
+            apply ih2,
+          },
         end,
-        by_cases h_b1 : (false = bval b1 s),
-        {
-          simp [h_b1],
-          -- length bcomp b2 - apply h_bcomp2
-          apply h_bcomp2,
-        },
-        {
-          simp [h_b1],
-          -- 0 - apply ih2
-          apply ih2,
-        },
+        apply h_last,
       },
       finish,
     },
@@ -1461,25 +1489,69 @@ begin
         simp [h_b1],
       },
       {
+
         simp,
-        specialize ih2 f n,
-        simp [h_nneg] at ih2,
-        have h_bcomp2 : exec (bcomp b2 f n) (↑((bcomp b2 f n).length) + n, s, stk) (↑((bcomp b2 f n).length) + n, s, stk) :=
+        have h_last : exec (bcomp b2 f n) (ite (false = bval b1 s) (↑((bcomp b2 f n).length) + n) 0, s, stk) (↑((bcomp b2 f n).length) + ite (f = (bval b1 s ∧ bval b2 s)) n 0, s, stk) :=
         begin
-          apply rtc.star.refl,
+          by_cases (false = bval b1 s),
+          {   -- length bcomp b2 - apply h_bcomp2
+            have h_and_false : f = (bval b1 s ∧ bval b2 s) := 
+            begin
+              have h_not_f : ¬ f := 
+              begin
+                have h_false : f = ¬true  := 
+                begin
+                  apply not_not_eq,
+                  apply h_f,
+                end,
+                simp at h_false,
+                apply h_false,
+              end,
+              have h_not_bval : ¬ bval b1 s := 
+              begin
+                simp at h,
+                apply h,
+              end,
+              simp [h_not_f, h_not_bval],
+            end, 
+            simp [h_and_false],
+            simp [h],
+            have h_bcomp2 : exec (bcomp b2 (bval b1 s ∧ bval b2 s) n) (↑((bcomp b2 (bval b1 s ∧ bval b2 s) n).length) + n, s, stk) (↑((bcomp b2 (bval b1 s ∧ bval b2 s) n).length) + n, s, stk) :=
+            begin
+              apply rtc.star.refl,
+            end,
+            apply h_bcomp2,
+            
+            
+          },
+          {-- 0 - apply ih2
+            simp [h],
+            have h_rw_and : (bval b1 s ∧ bval b2 s) = (bval b2 s) := 
+            begin
+              have h_bval : bval b1 s := 
+              begin
+                have h_not_in : (false = ¬ (bval b1 s)) :=
+                begin
+                  apply not_not_eq,
+                  apply h,
+                end,
+                simp at h_not_in,
+                apply h_not_in,
+              end,
+              simp [h_bval],
+            end,
+            rw [h_rw_and], 
+            specialize ih2 f n,
+            simp [h_nneg] at ih2,
+            apply ih2,
+          },
         end,
-        by_cases h_b1 : (false = bval b1 s),
-        {
-          simp [h_b1],
-          apply h_bcomp2,
-        },
-        {
-          simp [h_b1],
-          -- 0 - apply ih2
-          apply ih2,
-        },
+        apply h_last,
+
       },
-      simp,
+      {
+        simp [int.add_assoc],
+      }
     },
   },
   case Less : a1 a2{  --DONE
@@ -1554,7 +1626,7 @@ end
 
 /-
 
-## Preservation of semantics
+## Preservation of semantics - ccomp correctness
 
 lemma ccomp_bigstep:
   "(c,s) ⇒ t ⟹ ccomp c ⊢ (0,s,stk) →* (size(ccomp c),t,stk)"
@@ -1720,7 +1792,6 @@ begin
     let cw := ccomp(While b c),
     have h_cond : exec cw (0, s1, stk) (list.length cb, s1, stk) := 
       begin
-        -- specialize ih_h_step stk,
         simp [cw, ccomp],
         simp [cb, cc],
         apply exec_appendR,
@@ -1852,7 +1923,5 @@ begin
     simp,
   },
 end
-
-
 
 end LoComp

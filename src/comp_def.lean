@@ -75,7 +75,7 @@ def bval : bexp → state → Prop
 | (And b1 b2) s := bval b1 s ∧ bval b2 s
 | (Less a1 a2) s := (eval a1 s) < (eval a2 s) 
 
-noncomputable def bcomp : bexp → Prop → ℤ → list instr  --TODO: TD6: find out whether noncomputable is okay
+noncomputable def bcomp : bexp → Prop → ℤ → list instr 
 | (Bc v) f n := if (v = f) then [JMP n] else []
 | (Not b) f n :=  bcomp b (¬ f) n
 | (And b1 b2) f n := 

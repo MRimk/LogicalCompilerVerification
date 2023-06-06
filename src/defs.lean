@@ -17,6 +17,7 @@ set_option pp.generalized_field_notation false
 namespace LoComp
 
 
+/- # Definitions -/
 def vname := string
 
 def val := ℤ
@@ -126,6 +127,7 @@ end rtc
 
 export rtc
 
+/- ## State: variable name → ℤ -/
 
 def state : Type := vname → ℤ
 
@@ -188,7 +190,7 @@ abbreviation head2 (xs : stack) : ℤ := xs.tail.head
 abbreviation tail2 (xs : stack) : stack := xs.tail.tail
 
 
-
+/- ## Instruction -/
 
 inductive instr : Type  -- page 35 
 | LOADI : val → instr
@@ -201,7 +203,7 @@ inductive instr : Type  -- page 35
 | JMP : int → instr
 | JMPLESS : int → instr
 | JMPGE : int → instr
-| NOP : instr           -- this is added to avoid option 
+| NOP : instr   -- this is added to avoid option 
 
 
 open instr
@@ -236,6 +238,7 @@ def nth : list instr → ℤ → instr
 
 
 /- 
+  ## Single step execution
   Execute one instruction
   check if pc is in a valid location in the list 
 -/
@@ -260,11 +263,7 @@ lemma exec1I {li : list instr} {i s stk c'}
     simp [h1, h2, h3],
   end
 
-
-
-
-
-
+/- ## Multiple step execution -/
 abbreviation exec (li : list instr) (c : config) (c' : config) : Prop :=
 star (exec1 li) c c'
 
