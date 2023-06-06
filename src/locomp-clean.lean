@@ -1388,7 +1388,7 @@ begin
       exact b_ih,
     }
   },
-  case And : b1 b2 ih1 ih2{ --INCOMPLETE: error: occurs check failed.
+  case And : b1 b2 ih1 ih2{ --DONE
 
     simp [bcomp, bval],
     by_cases h_f : (f = true),
@@ -1411,24 +1411,51 @@ begin
       },
       {
         simp,
-        specialize ih2 true n,
-        simp [h_nneg] at ih2,
-
-        have h_bcomp2 : exec (bcomp b2 true n) (↑((bcomp b2 true n).length), s, stk) (↑((bcomp b2 true n).length), s, stk) :=
+        have h_last : exec (bcomp b2 true n) (ite (false = bval b1 s) ↑((bcomp b2 true n).length) 0, s, stk) (↑((bcomp b2 true n).length) + ite (f = (bval b1 s ∧ bval b2 s)) n 0, s, stk) :=
         begin
-          apply rtc.star.refl,
+          by_cases (false = bval b1 s),
+          {   
+            have h_and_false : ¬ f = (bval b1 s ∧ bval b2 s) := 
+            begin
+              rw [h_f],
+              rw [←h],
+              simp,
+            end, 
+            simp [h_and_false],
+            simp [h],
+            have h_bcomp2 : exec (bcomp b2 true n) (↑((bcomp b2 true n).length), s, stk) (↑((bcomp b2 true n).length), s, stk) :=
+            begin
+              apply rtc.star.refl,
+            end,
+            -- length bcomp b2 - apply h_bcomp2
+            apply h_bcomp2,
+          },
+          {
+            simp [h],
+            have h_rw_and : (bval b1 s ∧ bval b2 s) = (bval b2 s) := 
+            begin
+              have h_bval : bval b1 s := 
+              begin
+                have h_not_in : (false = ¬ (bval b1 s)) :=
+                begin
+                  apply not_not_eq,
+                  apply h,
+                end,
+                simp at h_not_in,
+                apply h_not_in,
+              end,
+              simp [h_bval],
+            end,
+            rw [h_rw_and], 
+            specialize ih2 true n,
+            simp [h_nneg] at ih2,
+            -- 0 - apply ih2
+            rw [h_f],
+            apply ih2,
+          },
         end,
-        by_cases h_b1 : (false = bval b1 s),
-        {
-          simp [h_b1],
-          -- length bcomp b2 - apply h_bcomp2
-          apply h_bcomp2,
-        },
-        {
-          simp [h_b1],
-          -- 0 - apply ih2
-          apply ih2,
-        },
+        apply h_last,
+        -- something is really not right here because if i move simp is not working here.
       },
       finish,
     },
@@ -1461,25 +1488,71 @@ begin
         simp [h_b1],
       },
       {
+
         simp,
-        specialize ih2 f n,
-        simp [h_nneg] at ih2,
-        have h_bcomp2 : exec (bcomp b2 f n) (↑((bcomp b2 f n).length) + n, s, stk) (↑((bcomp b2 f n).length) + n, s, stk) :=
+        have h_last : exec (bcomp b2 f n) (ite (false = bval b1 s) (↑((bcomp b2 f n).length) + n) 0, s, stk) (↑((bcomp b2 f n).length) + ite (f = (bval b1 s ∧ bval b2 s)) n 0, s, stk) :=
         begin
-          apply rtc.star.refl,
+          by_cases (false = bval b1 s),
+          {   
+            have h_and_false : f = (bval b1 s ∧ bval b2 s) := 
+            begin
+              have h_not_f : ¬ f := 
+              begin
+                have h_false : f = ¬true  := 
+                begin
+                  apply not_not_eq,
+                  apply h_f,
+                end,
+                simp at h_false,
+                apply h_false,
+              end,
+              have h_not_bval : ¬ bval b1 s := 
+              begin
+                simp at h,
+                apply h,
+              end,
+              simp [h_not_f, h_not_bval],
+            end, 
+            simp [h_and_false],
+            simp [h],
+            have h_bcomp2 : exec (bcomp b2 (bval b1 s ∧ bval b2 s) n) (↑((bcomp b2 (bval b1 s ∧ bval b2 s) n).length) + n, s, stk) (↑((bcomp b2 (bval b1 s ∧ bval b2 s) n).length) + n, s, stk) :=
+            begin
+              apply rtc.star.refl,
+            end,
+            apply h_bcomp2,
+            
+            -- length bcomp b2 - apply h_bcomp2
+          },
+          {
+            simp [h],
+            have h_rw_and : (bval b1 s ∧ bval b2 s) = (bval b2 s) := 
+            begin
+              have h_bval : bval b1 s := 
+              begin
+                have h_not_in : (false = ¬ (bval b1 s)) :=
+                begin
+                  apply not_not_eq,
+                  apply h,
+                end,
+                simp at h_not_in,
+                apply h_not_in,
+              end,
+              simp [h_bval],
+            end,
+            rw [h_rw_and], 
+            specialize ih2 f n,
+            simp [h_nneg] at ih2,
+            apply ih2,
+            -- 0 - apply ih2
+            
+          },
         end,
-        by_cases h_b1 : (false = bval b1 s),
-        {
-          simp [h_b1],
-          apply h_bcomp2,
-        },
-        {
-          simp [h_b1],
-          -- 0 - apply ih2
-          apply ih2,
-        },
+        apply h_last,
+
       },
-      simp,
+      {
+        simp [int.add_assoc],
+      }
     },
   },
   case Less : a1 a2{  --DONE
@@ -1852,7 +1925,5 @@ begin
     simp,
   },
 end
-
-
 
 end LoComp
