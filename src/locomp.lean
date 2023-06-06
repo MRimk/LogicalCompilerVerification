@@ -283,38 +283,13 @@ begin
       exact b_ih,
     }
   },
-  case And : b1 b2 ih1 ih2{ --INCOMPLETE: structure of the proof? 
+  case And : b1 b2 ih1 ih2{ --INCOMPLETE: error: occurs check failed.
 
     simp [bcomp, bval],
-    -- let cb2 := bcomp b2 f n,
-    -- let m := if f = true then int.of_nat (list.length cb2) else int.of_nat (list.length cb2) + n,
-    -- let cb1 := bcomp b1 false m,
-    -- have h_exec1 : exec cb1 (0, s, stk) (list.length cb1 + (if false = bval b1 s then m else 0), s, stk) :=
-    -- begin
-    --   simp [cb1],
-    --   specialize ih1 false m,
-    --   have h_m : 0 ≤ m := sorry,
-    --   simp [h_m] at ih1,
-    --   apply ih1,
-    -- end,
-    -- have h_exec2 : exec cb2 (list.length cb1 + (if false = bval b1 s then m else 0), s, stk)
-    --                         (list.length (cb1 ++ cb2) + (if false = (bval b2 s) then (if false = bval b1 s then m else 0) + n else (if false = bval b1 s then m else 0)), s, stk) :=
-    --  begin
-    --   simp,
-    --   simp [cb2, cb1],
-
-    --   --ih2
-    --   sorry,
-    -- end,
-
-    
     by_cases h_f : (f = true),
     {
       simp [h_f],
       rw [bval],
-      -- have h_eq : f = bval b1 s ∧ bval b2 s := sorry,
-
-      -- simp [h_eq],
       apply exec_append_trans,
       apply int.of_nat ((bcomp b1 false ↑((bcomp b2 true n).length)).length),
       {
@@ -332,73 +307,76 @@ begin
       {
         simp,
         specialize ih2 true n,
-        -- by cases 
-        -- 0 - apply ih2
-        -- b2 length - refl
         simp [h_nneg] at ih2,
-        simp [h_and.right] at ih2,
-        apply ih2,
+
+        have h_bcomp2 : exec (bcomp b2 true n) (↑((bcomp b2 true n).length), s, stk) (↑((bcomp b2 true n).length), s, stk) :=
+        begin
+          apply rtc.star.refl,
+        end,
+        by_cases h_b1 : (false = bval b1 s),
+        {
+          simp [h_b1],
+          -- length bcomp b2 - apply h_bcomp2
+          apply h_bcomp2,
+        },
+        {
+          simp [h_b1],
+          -- 0 - apply ih2
+          apply ih2,
+        },
       },
       finish,
     },
     {
-      have h_notf : ¬f := sorry,
-      simp [bcomp],
       simp [h_f],
       rw [bval],
-      have h_eq : ¬ f = bval b1 s ∧ bval b2 s := sorry,
-      simp [h_eq],
+      have h_imp_nneg : 0 ≤ ↑((bcomp b2 f n).length) + n := 
+      begin
+        have h_list_nneg : 0 ≤ ↑((bcomp b2 f n).length) :=
+        begin
+          simp [list.length_nneg],
+        end,
+        linarith,
+      end,
       apply exec_append_trans,
       apply int.of_nat ((bcomp b1 false (↑((bcomp b2 f n).length) + n)).length),
       {
         specialize ih1 false (int.of_nat (list.length (bcomp b2 f n)) + n),
-        simp at ih1,
-        have h_f_b1 : ¬ f = bval b1 s := sorry,
-        simp [h_f_b1, h_and.left] at ih1,
-        have h_imp_nneg : 0 ≤ ↑((bcomp b2 f n).length) + n := sorry,
+        simp at ih1,        
         simp [h_imp_nneg] at ih1,
         apply ih1,
       },
       simp,
       {
+        by_cases h_b1 : (false = bval b1 s),
+        {
+          simp [h_b1],
+          simp [h_imp_nneg],
+        },
+        simp [h_b1],
+      },
+      {
         simp,
         specialize ih2 f n,
         simp [h_nneg] at ih2,
-        have h_f_b2 : ¬ f = bval b2 s := sorry,
-        simp [h_f_b2] at ih2,
-        apply ih2,
+        have h_bcomp2 : exec (bcomp b2 f n) (↑((bcomp b2 f n).length) + n, s, stk) (↑((bcomp b2 f n).length) + n, s, stk) :=
+        begin
+          apply rtc.star.refl,
+        end,
+        by_cases h_b1 : (false = bval b1 s),
+        {
+          simp [h_b1],
+          apply h_bcomp2,
+        },
+        {
+          simp [h_b1],
+          -- 0 - apply ih2
+          apply ih2,
+        },
       },
       simp,
     },
   },
-    -- specialize ih1 false (↑(list.length (bcomp b2 f n)) + ite (f = bval b2 s) n 0),
-    -- have h_b2_len_nneg : 0 ≤ (↑(list.length (bcomp b2 f n)) + ite (f = bval b2 s) n 0) :=
-    -- begin
-    --   have h_b2_len : 0 ≤ ↑(list.length (bcomp b2 f n)) := by simp [list.length_nneg],
-    --   have h_ite_leng : 0 ≤  ite (f = bval b2 s) n 0 := begin
-    --     by_cases h_ite : (f = bval b2 s),
-    --     {
-    --       simp [h_ite],
-    --       apply h_nneg,
-    --     },
-    --     {simp [h_ite],}
-    --   end,
-    --   linarith,
-    -- end,
-    -- simp [h_b2_len_nneg] at ih1,
-    -- specialize ih2 f n,
-    -- simp [h_nneg] at ih2,
-
-    -- simp [bcomp],
-    -- by_cases h_f : (f = true),
-    -- {
-    --   simp [h_f],
-    --   sorry,
-    -- },
-    -- {
-    --   simp [h_f],
-    --   sorry,
-    -- }
   case Less : a1 a2{  --DONE
     simp [bcomp],
     rw [bval],
@@ -772,15 +750,4 @@ end
 
 
 
-/-
-QUESTIONS:
-TD1 : How to solve an edgecase for NOP?: 
-      0 < ↑(list.length list.nil) - this is an edgecase because list.nil (or NOP) does not increase pc and such list.length [] cannot be > 0.
-      (bcomp Bc and ccomp SKIP)  
-TD3 : bcomp and - how to get a correct exec?
-TD4 : How to specify this step exactly to t?
-TD5 : silly loop notation clarification? - not important
-TD6: noncomputable - is it correct? - not important
-TD7: Do I need to do small_step semantics? they are not in the .thy file but are in the chapter 8
--/
 end LoComp

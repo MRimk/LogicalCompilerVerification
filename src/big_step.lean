@@ -38,21 +38,6 @@ inductive big_step : com × state → state → Prop
 infix ` ⟹ ` : 110 := big_step
 
 
--- lemma silly_loop_from_1_big_step : --TODO: TD5: silly_loop notation clarification
---   (silly_loop ({"x" ↦ 1}) {"x" ↦ 1}) ⟹ (λ_, 0) :=
--- begin
---   rw silly_loop,
---   apply big_step.while_true,
---   { simp },
---   { apply big_step.seq,
---     { apply big_step.skip },
---     { apply big_step.assign } },
---   { simp,
---     apply big_step.while_false,
---     linarith }
--- end
-
-
 /-! ## Properties of the Big-Step Semantics
 
 Equipped with a big-step semantics, we can
