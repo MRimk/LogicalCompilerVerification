@@ -286,26 +286,26 @@ begin
   case And : b1 b2 ih1 ih2{ --INCOMPLETE: structure of the proof? 
 
     simp [bcomp, bval],
-    let cb2 := bcomp b2 f n,
-    let m := if f = true then int.of_nat (list.length cb2) else int.of_nat (list.length cb2) + n,
-    let cb1 := bcomp b1 false m,
-    have h_exec1 : exec cb1 (0, s, stk) (list.length cb1 + (if false = bval b1 s then m else 0), s, stk) :=
-    begin
-      simp [cb1],
-      specialize ih1 false m,
-      have h_m : 0 ≤ m := sorry,
-      simp [h_m] at ih1,
-      apply ih1,
-    end,
-    have h_exec2 : exec cb2 (list.length cb1 + (if false = bval b1 s then m else 0), s, stk)
-                            (list.length (cb1 ++ cb2) + (if false = (bval b2 s) then (if false = bval b1 s then m else 0) + n else (if false = bval b1 s then m else 0)), s, stk) :=
-     begin
-      simp,
-      simp [cb2],
+    -- let cb2 := bcomp b2 f n,
+    -- let m := if f = true then int.of_nat (list.length cb2) else int.of_nat (list.length cb2) + n,
+    -- let cb1 := bcomp b1 false m,
+    -- have h_exec1 : exec cb1 (0, s, stk) (list.length cb1 + (if false = bval b1 s then m else 0), s, stk) :=
+    -- begin
+    --   simp [cb1],
+    --   specialize ih1 false m,
+    --   have h_m : 0 ≤ m := sorry,
+    --   simp [h_m] at ih1,
+    --   apply ih1,
+    -- end,
+    -- have h_exec2 : exec cb2 (list.length cb1 + (if false = bval b1 s then m else 0), s, stk)
+    --                         (list.length (cb1 ++ cb2) + (if false = (bval b2 s) then (if false = bval b1 s then m else 0) + n else (if false = bval b1 s then m else 0)), s, stk) :=
+    --  begin
+    --   simp,
+    --   simp [cb2, cb1],
 
-      --ih2
-      sorry,
-    end,
+    --   --ih2
+    --   sorry,
+    -- end,
 
     
     by_cases h_f : (f = true),
@@ -314,20 +314,27 @@ begin
       rw [bval],
       -- have h_eq : f = bval b1 s ∧ bval b2 s := sorry,
 
-      simp [h_eq],
+      -- simp [h_eq],
       apply exec_append_trans,
       apply int.of_nat ((bcomp b1 false ↑((bcomp b2 true n).length)).length),
       {
         specialize ih1 false (int.of_nat (list.length (bcomp b2 f n))),
         simp at ih1,
-        have h_f_b1 : f = bval b1 s := sorry,
-        simp [h_f_b1, h_and.left] at ih1,
+        simp [h_f] at ih1,
         apply ih1,
       },
       simp,
       {
+        by_cases h_b1 : (false = bval b1 s),
+        simp [h_b1],
+        simp [h_b1],
+      },
+      {
         simp,
         specialize ih2 true n,
+        -- by cases 
+        -- 0 - apply ih2
+        -- b2 length - refl
         simp [h_nneg] at ih2,
         simp [h_and.right] at ih2,
         apply ih2,
