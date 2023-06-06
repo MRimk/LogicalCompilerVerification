@@ -3,12 +3,13 @@ import .defs
 namespace LoComp
 
 open instr
--- VERIFICATION INFRASTRUCTURE
+/- # Verification infrastructure -/
 
 /-
-lemma iexec_shift [simp]: 
-  "((n+i',s',stk') = iexec x (n+i,s,stk)) = ((i',s',stk') = iexec x (i,s,stk))"
-by(auto split:instr.split)
+  ## iexec shift
+  lemma iexec_shift [simp]: 
+    "((n+i',s',stk') = iexec x (n+i,s,stk)) = ((i',s',stk') = iexec x (i,s,stk))"
+  by(auto split:instr.split)
 -/
 
 
@@ -175,6 +176,8 @@ begin
   }
 end
 
+
+/- ## exec concatenation correctness -/
 
 /-
 lemma inth_append [simp]:
