@@ -192,8 +192,8 @@ abbreviation tail2 (xs : stack) : stack := xs.tail.tail
 
 /- ## Instruction -/
 
-inductive instr : Type  -- page 35 
-| LOADI : val → instr
+inductive instr : Type
+| LOADI : ℤ → instr
 | LOAD : vname → instr 
 | ADD : instr
 | SUB : instr
