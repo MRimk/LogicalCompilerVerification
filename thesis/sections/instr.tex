@@ -1,0 +1,35 @@
+\chapter{Stack machine instructions}\label{s:instr}
+
+To set up a stack machine, we begin by defining the instruction set architecture and semantics. The definitions in this section are heavily inspired by Isabelle/HOL definitions in Concrete Semantics \cite{isabelle}, yet it is expanded upon and adapted to suit Lean's structure. Moreover, the stack machine is designed to fit a minimalist imperative language called WHILE defined in the Hitchhiker's Guide \cite{hithchiker}. 
+
+We start by defining the basis of our stack machine - variables, values, and the stack. Since this is a simple stack machine, the supported value type is an integer and we can also store variables whose name is of string type. Stack in our case is created to save the values, and it is defined as a list of integers.
+\begin{lstlisting}
+    def vname := string
+    def stack := list ℤ 
+\end{lstlisting}
+
+The way the variables are connected to the values is through a state function, which is essentially the machine's memory. State is a mapping of \lstinline{vname → ℤ} such that the value can be assigned and updated. I have used the state definition from Hitchhiker's Guide \cite{hithchiker}, where the state is defined as a mapping of \lstinline{string → ℕ} but since the variables are integers and the program counter is going to be integer, the definition was adapted accordingly. One of the key operations on the state that make it work as a mapping is the update operation.
+\begin{lstlisting}
+    def state.update (name : vname) (val : ℤ) (s : state) : state :=
+    λname', if name' = name then val else s name'
+\end{lstlisting}
+This operation either assigns a new value to the existing variable or creates a new variable and does it each time without additional operations required. This is possible because the update has several proven lemmas, which are imported from the Hitchhiker's Guide \cite{hithchiker}, that can be used for further simplification in the application. 
+
+The instruction set is comprised of simple, assembly-level instructions to put the value in the stack, do arithmetic operations on the values, change the variable, and change the order of execution. The definition of instruction is of previously-discussed inductive type, which makes each instruction a separate constructor.  
+\begin{lstlisting}
+    inductive instr : Type
+    | LOADI : ℤ → instr
+    | LOAD : vname → instr 
+    | ADD : instr
+    | SUB : instr
+    | MUL : instr
+    | DIV : instr
+    | STORE : vname → instr
+    | JMP : int → instr
+    | JMPLESS : int → instr
+    | JMPGE : int → instr
+    | NOP : instr
+\end{lstlisting}
+The instruction \lstinline{LOADI} pushes the integer on the stack, \lstinline{LOAD} pushes the value of the variable on the stack, \lstinline{ADD}, \lstinline{SUB}, \lstinline{MUL}, \lstinline{DIV} do corresponding arithmetic operations with the top two integer values of the stack. \lstinline{STORE} instruction stores the top value of the stack in memory under a given variable name. \lstinline{JMP} jumps, or changes the program counter, by a given relative value. \lstinline{JPLESS} and \lstinline{JMPGE} compare the two top stack values and jumps if the second one is less or if the second one is greater or equal accordingly. 
+
+In Isabelle the definitions of machine instructions and its architecture do not differ, because Isabelle does not differ as much when defining types and functions from Lean.

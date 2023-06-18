@@ -1,0 +1,108 @@
+\chapter{Machine Executions}\label{s:exec}
+
+Stack machine instructions are executed in steps, which are transitions between machine configurations. Machine configuration is defined as follows:
+\begin{lstlisting}
+    def config := ℤ × state × stack
+\end{lstlisting}
+Config is a tuple of a program counter, the current state or memory, and the current state of the stack.
+
+The machine step, function \lstinline{iexec} is a transition from a given config to another one by a specific step. The function does the instruction and in the process either increases by one or changes the program counter to where the instruction says it to change to. For readability and later semantics proofs, I do not to create abbreviations for \lstinline{stk.tail.tail} since it represents itself well enough.
+\begin{lstlisting}
+def iexec : instr → config → config
+| (LOADI n) (i, s, stk) := (i + 1, s, n :: stk)
+| (LOAD v) (i, s, stk) := (i + 1, s, s v :: stk)
+| ADD (i, s, stk) := (i + 1, s, (stk.tail.head + stk.head) :: stk.tail.tail)
+| SUB (i, s, stk) := (i + 1, s, (stk.tail.head - stk.head) :: stk.tail.tail)
+| MUL (i, s, stk) := (i + 1, s, (stk.tail.head * stk.head) :: stk.tail.tail)
+| DIV (i, s, stk) := (i + 1, s, (stk.tail.head / stk.head) :: stk.tail.tail)
+| (STORE v) (i, s, stk) := (i + 1, s{v ↦ (stk.head)}, stk.tail)
+| (JMP n) (i, s, stk) := (i + 1 + n, s, stk)
+| (JMPLESS n) (i, s, stk) := 
+  if (stk.tail.head) < (stk.head)
+  then (i + 1 + n, s, stk.tail.tail)
+  else (i + 1, s, stk.tail.tail)
+| (JMPGE n) (i, s, stk) := 
+  if (stk.tail.head) ≥ (stk.head)
+  then (i + 1 + n, s, stk.tail.tail)
+  else (i + 1, s, stk.tail.tail)
+| NOP (i, s, stk) := (i, s, stk)
+\end{lstlisting}
+
+Having this step defined is not enough to check whether it is a valid execution, since it just applies the instruction to the config. For that, I define a boolean check function, which checks whether, given a list of instructions (a program) and two configurations, there can be a single instruction step taken at the first configuration's program counter location. 
+\todo{should i talk about isabelle syntax differences?}
+\begin{lstlisting}
+    def exec1  (li : list instr) (c : config)  (c' : config) : Prop := 
+    ( c' = iexec (nth li c.fst) c ∧ 0 ≤ c.fst ∧ c.fst < li.length)  
+\end{lstlisting}
+
+\todo{would it be too talk about exec1I as an exec1 intro rule?}
+
+At the same time, this function checks whether the first config's program counter is valid, or is in bounds of the instruction list. This check is important because the program counter is an integer, therefore could be less than zero, and it could also perform a wrong step if it is out of bounds. Since the program counter is an integer, I create a new definition of the nth item in the list, since in mathlib \cite{mathlib} there is only a definition of nth being a natural number. This is where the instruction \lstinline{NOP} comes in. It is defined such that getting an instruction would not be an option of the instr object, but the instr object itself, however, the option is required to define a case when the list is empty and thus returns option none. In my case, since it is very specific, the nth function works only on instruction lists.  
+%https://leanprover-community.github.io/mathlib_docs/init/data/list/basic.html#list.nth}. 
+\begin{lstlisting}
+    def nth : list instr → ℤ → instr  
+    | (a :: l) n := if (n = 0) 
+      then a
+      else nth l (n - 1)
+    | list.nil n := NOP
+\end{lstlisting}
+
+After \lstinline{exec1} - checking whether there is a step between two configurations - the definition can be expanded to a check whether there exists a set of steps in a list of instructions between two configurations - \lstinline{exec}. This can be done by using reflexive transitive closure \lstinline{star} with the \lstinline{exec1} function. As the name suggests, \lstinline{star} is either a reflexive relation between, in this case, two configs or a transitive relation. Transitive relation means that there is a step or steps that connect the two configurations. 
+\todo{insert lean code of exec?}
+
+To continue building on top of the machine executions, they have to be functionally verified. This is done for singular and multiple-step executions, and mostly concerns expanding the instruction list forwards or backward. It is important to be able to append or prepend new instructions and know how it will change the execution because if a command of multiple instructions is created to be executed, and that command needs to be concatenated to another command, both of these commands' lists are concatenated.
+
+I start by translating \lstinline{exec1_appendR} and \lstinline{exec_appendR} lemmas from Isabelle:
+\begin{lstlisting}
+    lemma exec1_appendR {li c c' li'} (h: exec1 li c c'): 
+    exec1 (li ++ li') c c'
+\end{lstlisting}
+\begin{lstlisting}
+    lemma exec_appendR {li c c' li'} (h: exec li c c'):
+    exec (li ++ li') c c' :=
+\end{lstlisting}
+
+These lemmas show that if a new instruction list is appended to the right of the current list, the execution does not change because the program counter is pointing to the same initial list. To prove these lemmas, I create and prove lemma \lstinline{nth_append}, which applies \lstinline{nth} to the correct list according to the size of \emph{i}:
+\begin{lstlisting}
+    lemma nth_append {l1 l2 : list instr} {i : ℤ}
+    (h_nneg : 0 ≤ i) :
+    nth (l1 ++ l2) i = (
+      if i < int.of_nat (list.length l1)
+      then nth l1 i
+      else nth l2 (i - list.length l1))
+\end{lstlisting}
+In Isabelle, the proof of \lstinline{nth_append} applies the induction on the first list length and uses \emph{auto simp}, which automatically proves this lemma. In Lean, however, the proof is based on induction but had to be manually split in cases to eliminate if-then-else structures and operate on existing inequalities. The proof is straightforward, since it covers simple cases, but needed some writing to get it done with the manual creation of hypotheses and rewrites.
+
+Using \lstinline{nth_append} lemma the proof of \lstinline{exec1_appendR} is not easy but quite clear - show that the program counter is always in-bounds of the first list. To do so empty list case results in the false (from which any goal can be proven) since the program counter has to be in between 0 and the length of the list, which is 0, and the non-empty list case main idea is to use the hypothesis \emph{h} from which we know that according to \lstinline{exec1} definition: \lstinline{i < li.length}.
+
+Lemma \lstinline{exec_appendR} is also based on induction (this time \lstinline{induction'} tactic, which generalizes induction hypothesis by default - useful in star proofs), just this time on star induction, which is the same as Isabelle, but I define the steps myself. In Isabelle, there is an automatic proof used - \emph{fastforce} - which is based on \emph{star.step} (reducing reflexive transitive closure to a singular step) and using \lstinline{exec1_appendR}. In Lean, using the singular \lstinline{star.single} (equivalent to Isabelle's \emph{star.step}) seems to be not enough, and I use \lstinline{star.tail} tactic, which splits the goal into a star step to a transitive config, and from that config a singular step to the end config.
+
+The way there are two lemmas for appending the instruction list with a new list and preserving the execution order, there are two lemmas that show how the order is preserved when the lists are prepended (appended to the left). When the list is added to the left of the current list, the program counter has to be shifted by the length of the added list in the starting config and the ending config.
+\begin{lstlisting}
+lemma exec1_appendL {i i' :ℤ} {li li' s stk s' stk'}
+(h_li : exec1 li (i, s, stk) (i', s', stk')) :
+exec1 (li' ++ li) ((list.length li') + i, s, stk) ((list.length li') + i', s', stk')
+
+lemma exec_appendL {i i' :ℤ} (li li' i s stk i' s' stk')
+(h_single : exec li (i, s, stk) (i', s', stk')) :
+exec (li' ++ li) (list.length li' + i, s, stk) (list.length li' + i', s', stk')
+\end{lstlisting}
+To prove \lstinline{exec1_appendL}, I use the \lstinline{nth_append} lemma and the definition of \lstinline{exec1}. It also requires to use \lstinline{by_cases} tactic, which is necessary to eliminate \lstinline{ite (i < 0)} that appears from \lstinline{nth_append}. Additionally, lemma \lstinline{iexec_shift} that is defined in Concrete Semantics is necessary to simplify the left append, and that lemma states that \lstinline{iexec} operation is not affected by the shift. 
+\begin{lstlisting}
+lemma iexec_shift {instr n i' s' stk' i s stk}:
+((n+i',s',stk') = iexec instr (n+i, s, stk)) = ((i',s',stk') = iexec instr (i,s,stk))
+\end{lstlisting}
+This lemma is proven using induction on \lstinline{instr}, thus proving that this is true for all instructions. All cases could be simplified into two - shift when there is \emph{JMP} instruction, and shift when there is not. Both cases are proven the same way, except when there is a \emph{JMP} instruction the equality of program counters contains the size of the jump, so I use two supportive lemmas to reuse the same proofs. Both supportive lemmas state a similar thing - if the program counter changes a certain way, when shift is applied, it will change the same way, and they have similar mathematical simplification using a \lstinline{iff.intro} tactic since one side simplifies because of the other being true and vice-versa.
+
+Out of the intuitive lemmas where the new instruction list is appended to the left or right of the execution, there are three more lemmas defined in Concrete Semantics. These lemmas are necessary for later use since they allow reasoning about \lstinline{exec} in a more simple manner than always expanding its definition to \lstinline{star}. 
+
+The most used lemma in this project in later stages is \lstinline{exec_append_trans} lemma, which shows that the separate executions of two lists can become one execution, if the first execution has the same end config as the second execution has the start config.
+\begin{lstlisting}
+lemma exec_append_trans {li' li s stk  s' stk' s'' stk''} {i i' j'' i'': ℤ}
+(h1: exec li (0, s, stk) (i', s', stk'))
+(h2: int.of_nat (list.length li) <= i' )
+(h3: exec li' (i' - list.length li, s', stk') (i'', s'', stk''))
+(h4: j'' = list.length li + i''): 
+exec (li ++ li') (0, s, stk) (j'', s'', stk'')
+\end{lstlisting}
+The lemma statement is a little bit packed, but it allows me to build transitive steps for two (or more) instruction lists concatenated together in later proofs, thus breaking down the goal into smaller subgoals. To prove this lemma I use \lstinline{star.trans} tactic, which simplifies easily using the initial hypotheses and previously define \lstinline{exec_appendR}. Isabelle proof is automatic, uses \emph{metis}, but it does specify that it uses \emph{star\_trans} rule.

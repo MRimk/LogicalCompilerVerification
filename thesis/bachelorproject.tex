@@ -1,0 +1,139 @@
+% For Dutch text, use option `dutch'
+% For VU students, use option `vu'
+%\documentclass[12pt,vu]{adammath}
+\documentclass[12pt,vu]{adammath}
+
+% \usepackage[dutch]{babel}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage[pdfborder={0 0 0}]{hyperref}
+\usepackage{lipsum}
+
+\usepackage{amsmath}
+\usepackage{amssymb}  
+\usepackage{amsthm}
+
+\usepackage{color}
+\definecolor{keywordcolor}{rgb}{0.7, 0.1, 0.1}   % red
+\definecolor{commentcolor}{rgb}{0.4, 0.4, 0.4}   % grey
+\definecolor{symbolcolor}{rgb}{0.0, 0.1, 0.6}    % blue
+\definecolor{sortcolor}{rgb}{0.1, 0.5, 0.1}      % green
+
+\usepackage{listings}
+\def\lstlanguagefiles{lstlean.tex}
+\lstset{language=lean}
+
+%
+% Data
+%
+
+\title{Logical Verification of a Compiler in LEAN}
+\author[m.rimkevicius@student.vu.nl, 2708302]{Martynas Rimkevičius}
+\what{Bachelor thesis}
+
+
+\programme{Bachelor of Computer Science}
+%\track{Dynamiische Systemen}
+
+\supervisor{prof.dr.\ Jasmin Christian Blanchette}
+\secondgrader{dr.\ xxxxx}
+\coverimage{\includegraphics[scale=1.2]{lean}}
+
+%
+% Math environments
+%
+
+\theoremstyle{plain}                    
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}           
+\newtheorem*{maintheorem}{Proposition A}  % special theorem
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}  
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+%
+% Maths
+%
+
+% examples
+\newcommand{\field}[1]{\mathbb{#1}}
+\newcommand{\R}{\field{R}} % real numbers
+\newcommand{\N}{\field{N}} % natural numbers
+\newcommand{\C}{\field{C}} % complex numbers
+\newcommand{\Z}{\field{Z}} % integers
+
+\newcommand{\ie}{\emph{i.e.,}\xspace}
+\newcommand{\eg}{\emph{e.g.,}\xspace}
+\newcommand{\etc}{etc.\xspace}
+\newcommand{\etal}{\emph{et~al.}\xspace} 
+
+\newcommand{\todo}[1]{\textcolor{blue}{#1}} 
+
+%
+% Content
+%
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+% \lipsum[2-3]
+\end{abstract}
+
+
+\setcounter{secnumdepth}{3} % organisational level that receives a numbers
+\setcounter{tocdepth}{3}    % print table of contents for level 3
+
+\tableofcontents
+
+\renewcommand{\chaptername}{} % uncomment to print only "1" not "Chapter 1"
+
+\input{sections/intro}
+\input{sections/lean}
+\input{sections/instr}
+\input{sections/exec}
+\input{sections/expressions}
+\input{sections/correctness}
+\input{sections/related}
+\input{sections/conclusion}
+
+%
+% Bibliography
+%
+
+% The argument of the thebibliography environment (in this example `x') 
+% denotes the length of the longest label. 
+% If you have fewer than 10 references the argument is one character; 
+% if you have 10 - 99 references you take an argument of two characters.
+% \begin{thebibliography}{x}
+% % Put bibliography in table of contents
+% \addcontentsline{toc}{chapter}{Bibliography} 
+
+% \bibitem{mascot}
+%   H R Simpson and K Jackson,
+%   \emph{Process Synchronisation in MASCOT},
+%   The Computer Journal, \textbf{22}, 332,
+%   1979.
+
+% \bibitem{piethazegras}
+%   \href{http://www.pythagoras.nu}{http://www.pythagoras.nu}
+% \end{thebibliography}
+\newpage
+\addcontentsline{toc}{chapter}{Bibliography} 
+\bibliographystyle{plain}
+\bibliography{bib}
+
+%
+% Appendix
+%
+
+\appendix
+
+% \chapter{Experiments}
+% \lipsum[2]
+
+\end{document}
