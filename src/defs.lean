@@ -24,7 +24,11 @@ def val := ℤ
 
 def stack := list ℤ 
 
-/- ## Reflexive Transitive Closure - Star -/
+/- 
+  ## Reflexive Transitive Closure - Star
+
+  adapted from https://lean-forward.github.io/logical-verification/2021/ course
+-/
 namespace rtc
 
 inductive star {α : Sort*} (r : α → α → Prop) (a : α) : α → Prop
@@ -127,7 +131,11 @@ end rtc
 
 export rtc
 
-/- ## State: variable name → ℤ -/
+/- 
+  ## State: variable name → ℤ 
+
+  adapted from https://lean-forward.github.io/logical-verification/2021/ course
+-/
 
 def state : Type := vname → ℤ
 
@@ -192,8 +200,8 @@ abbreviation tail2 (xs : stack) : stack := xs.tail.tail
 
 /- ## Instruction -/
 
-inductive instr : Type  -- page 35 
-| LOADI : val → instr
+inductive instr : Type
+| LOADI : ℤ → instr
 | LOAD : vname → instr 
 | ADD : instr
 | SUB : instr
@@ -203,7 +211,7 @@ inductive instr : Type  -- page 35
 | JMP : int → instr
 | JMPLESS : int → instr
 | JMPGE : int → instr
-| NOP : instr   -- this is added to avoid option 
+| NOP : instr
 
 
 open instr
@@ -246,21 +254,16 @@ def exec1  (li : list instr) (c : config)  (c' : config) : Prop :=
 ( c' = iexec (nth li c.fst) c ∧ 0 ≤ c.fst ∧ c.fst < li.length)  
 
 /-
-lemma exec1I [intro, code_pred_intro]:
-  "c' = iexec (P!!i) (i,s,stk) ⟹ 0 ≤ i ⟹ i < size P
-  ⟹ P ⊢ (i,s,stk) → c'"
-by (simp add: exec1_def)
-
+  ## Intro rule
 -/
-
 lemma exec1I {li : list instr} {i s stk c'}
-  (h1: c' = iexec (nth li i) (i, s, stk))
-  (h2 : 0 ≤ i) 
-  (h3 : i < li.length):
+  (h_eq: c' = iexec (nth li i) (i, s, stk))
+  (h_nneg : 0 ≤ i) 
+  (h_less : i < li.length):
   exec1 li (i, s, stk) c' := 
   begin 
     simp [exec1],
-    simp [h1, h2, h3],
+    simp [h_eq, h_nneg, h_less],
   end
 
 /- ## Multiple step execution -/

@@ -11,21 +11,16 @@ open bexp
 open com
 
 /-
-
 # Compilation correctness
 
-## acomp correctness
-lemma acomp_correct[intro]:
-  "acomp a ⊢ (0,s,stk) →* (size(acomp a),s,aval a s#stk)"
-by (induction a arbitrary: stk) fastforce+
-
+## Arithmetic expression correctness
 -/
 
 lemma acomp_correct {a : aexp}  {s : state}  {stk : stack} :
 exec (acomp a) (0, s, stk) (list.length (acomp a), s, (eval a s) :: stk) :=
 begin
   induction a generalizing stk,
-  case num {  --DONE
+  case num {  
     simp [acomp, eval],
     apply rtc.star.single,
     apply exec1I,
@@ -40,7 +35,7 @@ begin
       simp,
     }
   },
-  case var {  --DONE
+  case var {  
     simp [acomp, eval],
     apply rtc.star.single,
     apply exec1I,
@@ -55,7 +50,7 @@ begin
       simp,
     }
   },
-  case add : a b a_i b_i{ --DONE
+  case add : a b a_i b_i{ 
     simp [acomp],
     --trans a ++ (b ++ [OP])
     apply exec_append_trans,
@@ -91,7 +86,7 @@ begin
     },
     refl,
   },
-  case sub : a b a_i b_i{ --DONE
+  case sub : a b a_i b_i{ 
     simp [acomp],
     --trans a ++ (b ++ [OP])
     apply exec_append_trans,
@@ -127,7 +122,7 @@ begin
     },
     refl,
   },
-  case mul : a b a_i b_i{ --DONE
+  case mul : a b a_i b_i{ 
     simp [acomp],
     --trans a ++ (b ++ [OP])
     apply exec_append_trans,
@@ -163,7 +158,7 @@ begin
     },
     refl,
   },
-  case div : a b a_i b_i{ --DONE
+  case div : a b a_i b_i{ 
     simp [acomp],
     --trans a ++ (b ++ [OP])
     apply exec_append_trans,
@@ -205,27 +200,10 @@ end
 
 
 /-
-
-## bcomp correctness
-lemma bcomp_correct[intro]:
-  fixes n :: int
-  shows
-  "0 ≤ n ⟹
-  bcomp b f n ⊢
- (0,s,stk)  →*  (size(bcomp b f n) + (if f = bval b s then n else 0),s,stk)"
-proof(induction b arbitrary: f n)
-  case Not
-  from Not(1)[where f="~f"] Not(2) show ?case by fastforce
-next
-  case (And b1 b2)
-  from And(1)[of "if f then size(bcomp b2 f n) else size(bcomp b2 f n) + n" 
-                 "False"] 
-       And(2)[of n f] And(3) 
-  show ?case by fastforce
-qed fastforce+
+  ## Boolean expression correctness
 -/
 
-lemma not_not_eq {α β : Prop}
+lemma eq_not {α β : Prop}
 (h_not_eq : ¬ (α = β)) :
 α = ¬ β :=
 begin
@@ -240,7 +218,7 @@ lemma bcomp_correct (n: ℤ) ( b f s stk)
 exec (bcomp b f n) (0, s, stk) (list.length (bcomp b f n) + (if (f = bval b s) then n else 0), s, stk) :=
 begin
   induction b generalizing f n,
-  case Bc { --DONE
+  case Bc { 
     simp [bcomp],
     rw [bval],
     by_cases h_b_is_f : (b = f),
@@ -259,7 +237,7 @@ begin
       apply rtc.star.refl,
     }
   },
-  case Not : b{ --DONE
+  case Not : b{ 
     specialize b_ih (¬f) n,
     simp [bcomp],
     rw [bval],
@@ -273,7 +251,7 @@ begin
     {
       have h_fneg : f = ¬ bval b s := 
       begin
-        apply not_not_eq,
+        apply eq_not,
         exact h_bisf,
       end,
       simp [h_fneg],
@@ -282,7 +260,7 @@ begin
       exact b_ih,
     }
   },
-  case And : b1 b2 ih1 ih2{ --DONE
+  case And : b1 b2 ih1 ih2{ 
 
     simp [bcomp, bval],
     by_cases h_f : (f = true),
@@ -331,7 +309,7 @@ begin
               begin
                 have h_not_in : (false = ¬ (bval b1 s)) :=
                 begin
-                  apply not_not_eq,
+                  apply eq_not,
                   apply h,
                 end,
                 simp at h_not_in,
@@ -391,7 +369,7 @@ begin
               begin
                 have h_false : f = ¬true  := 
                 begin
-                  apply not_not_eq,
+                  apply eq_not,
                   apply h_f,
                 end,
                 simp at h_false,
@@ -422,7 +400,7 @@ begin
               begin
                 have h_not_in : (false = ¬ (bval b1 s)) :=
                 begin
-                  apply not_not_eq,
+                  apply eq_not,
                   apply h,
                 end,
                 simp at h_not_in,
@@ -444,7 +422,7 @@ begin
       }
     },
   },
-  case Less : a1 a2{  --DONE
+  case Less : a1 a2{  
     simp [bcomp],
     rw [bval],
     -- acomp a1 ++ (acomp a2 ++ ite (f = true) [JMPLESS n] [JMPGE n])
@@ -490,7 +468,7 @@ begin
                 simp [iexec],
                 have h_f_false : f = ¬ true :=
                 begin
-                  apply not_not_eq,
+                  apply eq_not,
                   exact h_f,
                 end,
                 simp [h_f_false],
@@ -516,41 +494,7 @@ end
 
 /-
 
-## Preservation of semantics - ccomp correctness
-
-lemma ccomp_bigstep:
-  "(c,s) ⇒ t ⟹ ccomp c ⊢ (0,s,stk) →* (size(ccomp c),t,stk)"
-proof(induction arbitrary: stk rule: big_step_induct)
-  case (Assign x a s)
-  show ?case by (fastforce simp:fun_upd_def cong: if_cong)
-next
-  case (Seq c1 s1 s2 c2 s3)
-  let ?cc1 = "ccomp c1"  let ?cc2 = "ccomp c2"
-  have "?cc1 @ ?cc2 ⊢ (0,s1,stk) →* (size ?cc1,s2,stk)"
-    using Seq.IH(1) by fastforce
-  moreover
-  have "?cc1 @ ?cc2 ⊢ (size ?cc1,s2,stk) →* (size(?cc1 @ ?cc2),s3,stk)"
-    using Seq.IH(2) by fastforce
-  ultimately show ?case by simp (blast intro: star_trans)
-next
-  case (WhileTrue b s1 c s2 s3)
-  let ?cc = "ccomp c"
-  let ?cb = "bcomp b False (size ?cc + 1)"
-  let ?cw = "ccomp(WHILE b DO c)"
-  have "?cw ⊢ (0,s1,stk) →* (size ?cb,s1,stk)"
-    using ‹bval b s1› by fastforce
-  moreover
-  have "?cw ⊢ (size ?cb,s1,stk) →* (size ?cb + size ?cc,s2,stk)"
-    using WhileTrue.IH(1) by fastforce
-  moreover
-  have "?cw ⊢ (size ?cb + size ?cc,s2,stk) →* (0,s2,stk)"
-    by fastforce
-  moreover
-  have "?cw ⊢ (0,s2,stk) →* (size ?cw,s3,stk)" by(rule WhileTrue.IH(2))
-  ultimately show ?case by(blast intro: star_trans)
-qed fastforce+
-
-end
+## Preservation of semantics - command correctness
 -/
 
 
@@ -559,11 +503,11 @@ lemma ccomp_bigstep {c : com} { s : state } {t : state } (stk : stack)
 exec (ccomp c) (0, s, stk) (list.length (ccomp c), t, stk) :=
 begin
   induction' h_step,
-  case skip { -- DONE
+  case skip { 
     simp [ccomp],
     apply rtc.star.refl,
   },
-  case assign { -- DONE
+  case assign { 
     simp [ccomp],
     apply exec_append_trans,
     apply int.of_nat (list.length (acomp a)),
@@ -586,7 +530,7 @@ begin
     },
     simp,
   },
-  case seq : c1 c2 s u t{ -- DONE
+  case seq : c1 c2 s u t{ 
     simp [ccomp],
     apply exec_append_trans,
     apply int.of_nat ((ccomp c1).length),
@@ -598,7 +542,7 @@ begin
     },
     simp,
   },
-  case ite_true : b c1 c2 { --DONE
+  case ite_true : b c1 c2 { 
     simp [ccomp],
       apply exec_append_trans,
       apply int.of_nat (bcomp b false (↑((ccomp c1).length) + 1)).length,
@@ -639,7 +583,7 @@ begin
       simp,
 
   },
-  case ite_false : b c1 c2 { -- DONE
+  case ite_false : b c1 c2 { 
     simp [ccomp],
 
     apply exec_append_trans,
@@ -676,7 +620,7 @@ begin
     },
     simp,
   },
-  case while_true : b c s1 s2 s3{ --DONE
+  case while_true : b c s1 s2 s3{ 
     let cc := ccomp c,
     let cb := bcomp b false (list.length cc + 1),
     let cw := ccomp(While b c),
@@ -782,7 +726,7 @@ begin
       }
     },
   },
-  case while_false : b c{ --DONE
+  case while_false : b c{ 
     let cc := ccomp c,
     let cb := bcomp b false (list.length cc + 1),
     let cw := ccomp(While b c),
