@@ -6,10 +6,7 @@ open instr
 /- # Verification infrastructure -/
 
 /-
-  ## iexec shift
-  lemma iexec_shift [simp]: 
-    "((n+i',s',stk') = iexec x (n+i,s,stk)) = ((i',s',stk') = iexec x (i,s,stk))"
-  by(auto split:instr.split)
+  ## iexec shift lemma
 -/
 
 
@@ -178,13 +175,6 @@ end
 
 
 /- ## exec concatenation correctness -/
-
-/-
-lemma inth_append [simp]:
-  "0 ≤ i ⟹
-  (xs @ ys) !! i = (if i < size xs then xs !! i else ys !! (i - size xs))"
-by (induction xs arbitrary: i) (auto simp: algebra_simps)
--/
 lemma nth_append {l1 l2 : list instr} {i : ℤ}
   (h_nneg : 0 ≤ i) :
   nth (l1 ++ l2) i = (
@@ -270,10 +260,6 @@ lemma nth_append {l1 l2 : list instr} {i : ℤ}
 
 
 
-/-
-lemma exec1_appendR: "P ⊢ c → c' ⟹ P@P' ⊢ c → c'"
-by (auto simp: exec1_def)
--/
 lemma exec1_appendR {li c c' li'} (h: exec1 li c c'): 
 exec1 (li ++ li') c c' :=
 begin
@@ -337,17 +323,7 @@ begin
   },
 end
 
-/-
-lemma exec_appendR: "P ⊢ c →* c' ⟹ P@P' ⊢ c →* c'"
-by (induction rule: star.induct) (fastforce intro: star.step exec1_appendR)+
 
-abbreviation exec (li : list instr) (c : config) (c' : config) : Prop :=
-star (exec1 li) c c'
-
-inductive star {α : Sort*} (r : α → α → Prop) (a : α) : α → Prop
-| refl {}    : star a
-| tail {b c} : star b → r b c → star c
--/
 lemma exec_appendR {li c c' li'} (h: exec li c c'):
 exec (li ++ li') c c' :=
 begin
@@ -366,15 +342,6 @@ begin
 
 end
 
-/-
-lemma exec1_appendL:
-  fixes i i' :: int 
-  shows
-  "P ⊢ (i,s,stk) → (i',s',stk') ⟹
-   P' @ P ⊢ (size(P')+i,s,stk) → (size(P')+i',s',stk')"
-  unfolding exec1_def
-  by (auto simp del: iexec.simps)
--/
 
 lemma exec1_appendL {i i' :ℤ} {li li' s stk s' stk'}
 (h_li : exec1 li (i, s, stk) (i', s', stk')) :
@@ -409,14 +376,7 @@ begin
   }
 end
 
-/-
-lemma exec_appendL:
-  fixes i i' :: int 
-  shows
- "P ⊢ (i,s,stk) →* (i',s',stk')  ⟹
-  P' @ P ⊢ (size(P')+i,s,stk) →* (size(P')+i',s',stk')"
-  by (induction rule: exec_induct) (blast intro: star.step exec1_appendL)+
--/
+
 lemma exec_appendL {i i' :ℤ} (li li' i s stk i' s' stk')
 (h_single : exec li (i, s, stk) (i', s', stk')) :
 exec (li' ++ li) (list.length li' + i, s, stk) (list.length li' + i', s', stk') :=
@@ -443,21 +403,10 @@ begin
 end
 
 /-
-text‹Now we specialise the above lemmas to enable automatic proofs of
-\<^prop>‹P ⊢ c →* c'› where ‹P› is a mixture of concrete instructions and
-pieces of code that we already know how they execute (by induction), combined
-by ‹@› and ‹#›. Backward jumps are not supported.
-The details should be skipped on a first reading.
-
-If we have just executed the first instruction of the program, drop it:›
-
-lemma exec_Cons_1 [intro]:
-  "P ⊢ (0,s,stk) →* (j,t,stk') ⟹
-  instr#P ⊢ (1,s,stk) →* (1+j,t,stk')"
-by (drule exec_appendL[where P'="[instr]"]) simp
+  ## Additional exec concatenation lemmas
 -/
 lemma exec_cons_1 {s stk j t stk' li instr}
-(h : exec li (0, s, stk) (j, t, stk')):
+(h_li : exec li (0, s, stk) (j, t, stk')):
 exec (instr :: li) (1, s, stk) (1 + j, t, stk') :=
 begin 
   have h_shift : exec ([instr] ++ li) ((list.length [instr]) + 0, s, stk) ((list.length [instr]) + j, t, stk') :=
@@ -465,26 +414,16 @@ begin
     apply exec_appendL,
     apply j,
     apply j,
-    apply h,
+    apply h_li,
   end,
   simp at h_shift,
   exact h_shift,
 end
-/-
-lemma exec_appendL_if[intro]:
-  fixes i i' j :: int
-  shows
-  "size P' <= i
-   ⟹ P ⊢ (i - size P',s,stk) →* (j,s',stk')
-   ⟹ i' = size P' + j
-   ⟹ P' @ P ⊢ (i,s,stk) →* (i',s',stk')"
-by (drule exec_appendL[where P'=P']) simp
--/
 
 lemma exec_appendL_if {li' li s stk j s' stk'} {i i' : ℤ}
-(h1: int.of_nat (list.length li') <= i )
-(h2: exec li (i - list.length li', s, stk) (j, s', stk'))
-(h3: i' = list.length li' + j): 
+(h_more: int.of_nat (list.length li') <= i )
+(h_li: exec li (i - list.length li', s, stk) (j, s', stk'))
+(h_i': i' = list.length li' + j): 
 exec (li' ++ li) (i, s, stk) (i', s', stk') :=
 begin
   have h_append : exec (li' ++ li) (list.length li' + (i - list.length li'), s, stk) (list.length li' + j, s', stk') :=
@@ -492,39 +431,27 @@ begin
     apply exec_appendL,
     apply i,
     apply i,
-    apply h2,
+    apply h_li,
   end,
   simp at h_append,
-  rw [h3],
+  rw [h_i'],
   exact h_append,
 end
 
 /-
-text‹Split the execution of a compound program up into the execution of its
-parts:›
-
-lemma exec_append_trans[intro]:
-  fixes i' i'' j'' :: int
-  shows
-"P ⊢ (0,s,stk) →* (i',s',stk') ⟹
- size P ≤ i' ⟹
- P' ⊢  (i' - size P,s',stk') →* (i'',s'',stk'') ⟹
- j'' = size P + i''
- ⟹
- P @ P' ⊢ (0,s,stk) →* (j'',s'',stk'')"
-by(metis star_trans[OF exec_appendR exec_appendL_if])
+  ### Splitting the execution into execution of parts
 -/
 lemma exec_append_trans {li' li s stk  s' stk' s'' stk''} {i i' j'' i'': ℤ}
-(h1: exec li (0, s, stk) (i', s', stk'))
-(h2: int.of_nat (list.length li) <= i' )
-(h3: exec li' (i' - list.length li, s', stk') (i'', s'', stk''))
-(h4: j'' = list.length li + i''): 
+(h_li: exec li (0, s, stk) (i', s', stk'))
+(h_i': int.of_nat (list.length li) <= i' )
+(h_li': exec li' (i' - list.length li, s', stk') (i'', s'', stk''))
+(h_j'': j'' = list.length li + i''): 
 exec (li ++ li') (0, s, stk) (j'', s'', stk'') :=
 begin
   apply rtc.star.trans,
   have h_appendR_li' : exec (li ++ li') (0, s, stk) (i', s', stk') :=
   begin
-    apply exec_appendR h1,
+    apply exec_appendR h_li,
   end, 
   exact h_appendR_li',
   have h_appendL_li : exec (li ++ li') (list.length li + (i' - list.length li), s', stk') (list.length li + i'', s'', stk'') :=
@@ -532,10 +459,10 @@ begin
     apply exec_appendL,
     apply i',
     apply i',
-    apply h3,
+    apply h_li',
   end,
   simp at h_appendL_li,
-  rw [h4],
+  rw [h_j''],
   exact h_appendL_li,
 end
 

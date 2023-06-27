@@ -9,6 +9,12 @@ open aexp
 open bexp
 open com
 
+
+/-
+  # Big-Step Semantics
+
+  adapted from https://lean-forward.github.io/logical-verification/2021/ course
+-/
 def silly_loop {s : state} : com :=
 While ( Bc ( s "x" > s "y") )
   (SKIP ;; Assign "x" (num ((s "x") - 1)))
